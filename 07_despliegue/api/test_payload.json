@@ -1,0 +1,10 @@
+[
+    {
+        "id_cliente": 1,
+        "principal": 10000.0,
+        "tipo_interes": 4.5,
+        "num_cuotas": 36,
+        "finalidad": "home_improvement",
+        "vivienda": "MORTGAGE"
+    }
+]

@@ -1,0 +1,31 @@
+# Archivos del sistema
+desktop.ini
+Thumbs.db
+# Entornos
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+# Jupyter
+.ipynb_checkpoints/
+.notebooks/
+# Datos
+datos/
+*.csv
+# Permitir el CSV de referencia de la API para despliegue
+!07_despliegue/api/data/demo_03_riesgos.csv
+*.xlsx
+*.parquet
+*.feather
+*.db
+*.sqlite
+*.duckdb
+# Entregables
+entregables/
+reports/
+# Archivos de log
+*.log
+# Configuración de IDE
+.vscode/
+.idea/

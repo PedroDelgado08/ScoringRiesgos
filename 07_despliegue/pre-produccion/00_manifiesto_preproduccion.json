@@ -1,0 +1,840 @@
+{
+    "version": "1.0",
+    "generado_por": "A_08_Limpieza",
+    "timestamp": "2026-04-10 00:00:00",
+    "notebook_hash": "PENDIENTE_CALCULO_EXTERNO",
+    "fuente_datos": {
+        "archivo": "02_datos/01_Originales/prestamos.csv",
+        "columnas_raw_necesarias": [
+            "id_cliente",
+            "antigüedad_empleo",
+            "estado",
+            "vivienda",
+            "finalidad",
+            "ingresos_verificados",
+            "num_cuotas",
+            "rating",
+            "ingresos",
+            "dti",
+            "num_hipotecas",
+            "porc_uso_revolving",
+            "num_lineas_credito",
+            "num_cancelaciones_12meses",
+            "num_derogatorios",
+            "num_meses_desde_ult_retraso",
+            "principal",
+            "tipo_interes",
+            "imp_cuota",
+            "imp_amortizado",
+            "imp_recuperado"
+        ],
+        "columnas_raw_descartadas": [
+            "id_prestamo",
+            "descripcion",
+            "empleo"
+        ]
+    },
+    "features_finalistas": [
+        {
+            "nombre": "ingresos_verificados_*",
+            "tipo": "float64",
+            "origen": "ingresos_verificados",
+            "transformacion": "OneHotEncoder",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "vivienda_*",
+            "tipo": "float64",
+            "origen": "vivienda",
+            "transformacion": "OneHotEncoder",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "finalidad_*",
+            "tipo": "float64",
+            "origen": "finalidad",
+            "transformacion": "OneHotEncoder",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "num_cuotas_*",
+            "tipo": "float64",
+            "origen": "num_cuotas",
+            "transformacion": "OneHotEncoder",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "antigüedad_empleo_oe_mms",
+            "tipo": "float64",
+            "origen": "antigüedad_empleo",
+            "transformacion": "OrdinalEncoder + MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "rating_oe_mms",
+            "tipo": "float64",
+            "origen": "rating",
+            "transformacion": "OrdinalEncoder + MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "ingresos_mms",
+            "tipo": "float64",
+            "origen": "ingresos",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "dti_mms",
+            "tipo": "float64",
+            "origen": "dti",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "num_lineas_credito_mms",
+            "tipo": "float64",
+            "origen": "num_lineas_credito",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "porc_uso_revolving_mms",
+            "tipo": "float64",
+            "origen": "porc_uso_revolving",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "principal_mms",
+            "tipo": "float64",
+            "origen": "principal",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "tipo_interes_mms",
+            "tipo": "float64",
+            "origen": "tipo_interes",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "imp_cuota_mms",
+            "tipo": "float64",
+            "origen": "imp_cuota",
+            "transformacion": "MinMaxScaler",
+            "requiere_fit": true
+        },
+        {
+            "nombre": "num_derogatorios_bin",
+            "tipo": "float64",
+            "origen": "num_derogatorios",
+            "transformacion": "Binarizer(threshold=0)",
+            "requiere_fit": false
+        }
+    ],
+    "variables_objetivo": [
+        {
+            "nombre": "target_pd",
+            "tipo": "int64",
+            "descripcion": "1 si Charged Off / Default, 0 en caso contrario"
+        },
+        {
+            "nombre": "target_ead",
+            "tipo": "float64",
+            "descripcion": "pendiente / principal, clampado a [0,1]"
+        },
+        {
+            "nombre": "target_lgd",
+            "tipo": "float64",
+            "descripcion": "1 - imp_recuperado / pendiente, clampado a [0,1]"
+        }
+    ],
+    "modelos_finales": [
+        {
+            "id": "PD",
+            "clase": "LogisticRegression",
+            "hiperparametros": {
+                "solver": "saga",
+                "C": 1,
+                "l1_ratio": 1
+            },
+            "metrica_validacion": {
+                "nombre": "roc_auc",
+                "valor": "PENDIENTE_EJECUCION"
+            },
+            "tabla_entrada": "df_pd",
+            "target": "target_pd",
+            "filtro_filas": "ninguno"
+        },
+        {
+            "id": "EAD",
+            "clase": "HistGradientBoostingRegressor",
+            "hiperparametros": {
+                "learning_rate": 0.1,
+                "max_iter": 100,
+                "max_depth": 5,
+                "min_samples_leaf": 50,
+                "scoring": "neg_mean_absolute_percentage_error",
+                "l2_regularization": 1
+            },
+            "metrica_validacion": {
+                "nombre": "mean_absolute_error",
+                "valor": "PENDIENTE_EJECUCION"
+            },
+            "tabla_entrada": "df_ead",
+            "target": "target_ead",
+            "filtro_filas": "target_pd == 1"
+        },
+        {
+            "id": "LGD",
+            "clase": "HistGradientBoostingRegressor",
+            "hiperparametros": {
+                "learning_rate": 0.01,
+                "max_iter": 100,
+                "max_depth": 5,
+                "min_samples_leaf": 50,
+                "scoring": "neg_mean_absolute_percentage_error",
+                "l2_regularization": 0.5
+            },
+            "metrica_validacion": {
+                "nombre": "mean_absolute_error",
+                "valor": "PENDIENTE_EJECUCION"
+            },
+            "tabla_entrada": "df_lgd",
+            "target": "target_lgd",
+            "filtro_filas": "target_pd == 1"
+        }
+    ],
+    "encoders": {
+        "ohe": {
+            "clase": "OneHotEncoder",
+            "params": {
+                "sparse_output": false,
+                "handle_unknown": "ignore"
+            },
+            "columnas_entrada": [
+                "ingresos_verificados",
+                "vivienda",
+                "finalidad",
+                "num_cuotas"
+            ]
+        },
+        "oe": {
+            "clase": "OrdinalEncoder",
+            "params": {
+                "handle_unknown": "use_encoded_value",
+                "unknown_value": -1,
+                "categories": [
+                    [
+                        "desconocido",
+                        "< 1 year",
+                        "1 year",
+                        "2 years",
+                        "3 years",
+                        "4 years",
+                        "5 years",
+                        "6 years",
+                        "7 years",
+                        "8 years",
+                        "9 years",
+                        "10+ years"
+                    ],
+                    [
+                        "A",
+                        "B",
+                        "C",
+                        "D",
+                        "E",
+                        "F",
+                        "G"
+                    ]
+                ]
+            },
+            "columnas_entrada": [
+                "antigüedad_empleo",
+                "rating"
+            ]
+        },
+        "binarizer": {
+            "clase": "Binarizer",
+            "params": {
+                "threshold": 0
+            },
+            "columnas_entrada": [
+                "num_derogatorios"
+            ]
+        },
+        "mms": {
+            "clase": "MinMaxScaler",
+            "params": {},
+            "columnas_entrada": [
+                "antigüedad_empleo_oe",
+                "rating_oe",
+                "ingresos",
+                "dti",
+                "num_lineas_credito",
+                "porc_uso_revolving",
+                "principal",
+                "tipo_interes",
+                "imp_cuota"
+            ]
+        }
+    },
+    "dag_transformaciones": {
+        "orden_ejecucion": [
+            "P01",
+            "P02",
+            "P03",
+            "P04",
+            "P05",
+            "P06",
+            "P07",
+            "P08",
+            "P09",
+            "P10",
+            "P11",
+            "P12",
+            "P13",
+            "P14",
+            "P15",
+            "P16",
+            "P17",
+            "P18",
+            "P19",
+            "P20",
+            "P21",
+            "P22",
+            "P23",
+            "P24",
+            "P25",
+            "P26",
+            "P27",
+            "P28",
+            "P29"
+        ],
+        "pasos": [
+            {
+                "paso_id": "P01",
+                "descripcion": "Reset de índice del DataFrame de trabajo",
+                "inputs": [
+                    "trabajo"
+                ],
+                "outputs": [
+                    "df"
+                ],
+                "depende_de": [],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "df = trabajo.copy(); df.reset_index(drop=True, inplace=True)"
+            },
+            {
+                "paso_id": "P02",
+                "descripcion": "Drop columna id_prestamo",
+                "inputs": [
+                    "df"
+                ],
+                "outputs": [
+                    "df"
+                ],
+                "depende_de": [
+                    "P01"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "df.drop(columns='id_prestamo', inplace=True)"
+            },
+            {
+                "paso_id": "P03",
+                "descripcion": "Split en subDataFrames categórico (cat) y numérico (num)",
+                "inputs": [
+                    "df"
+                ],
+                "outputs": [
+                    "cat",
+                    "num"
+                ],
+                "depende_de": [
+                    "P02"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat = df.select_dtypes(exclude='number').copy(); num = df.select_dtypes(include='number').copy()"
+            },
+            {
+                "paso_id": "P04",
+                "descripcion": "Drop columnas descripcion y empleo de cat",
+                "inputs": [
+                    "cat"
+                ],
+                "outputs": [
+                    "cat"
+                ],
+                "depende_de": [
+                    "P03"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat.drop(columns=['descripcion', 'empleo'], inplace=True)"
+            },
+            {
+                "paso_id": "P05",
+                "descripcion": "Imputación de antigüedad_empleo nulo → 'desconocido'",
+                "inputs": [
+                    "cat.antigüedad_empleo"
+                ],
+                "outputs": [
+                    "cat.antigüedad_empleo"
+                ],
+                "depende_de": [
+                    "P04"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat['antigüedad_empleo'] = cat['antigüedad_empleo'].fillna('desconocido')"
+            },
+            {
+                "paso_id": "P06",
+                "descripcion": "Imputación numérica: fillna(0) en todas las columnas de num",
+                "inputs": [
+                    "num"
+                ],
+                "outputs": [
+                    "num"
+                ],
+                "depende_de": [
+                    "P03"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num.fillna(0, inplace=True)"
+            },
+            {
+                "paso_id": "P07",
+                "descripcion": "Cast a int de 5 columnas numéricas enteras",
+                "inputs": [
+                    "num.num_hipotecas",
+                    "num.num_lineas_credito",
+                    "num.num_cancelaciones_12meses",
+                    "num.num_derogatorios",
+                    "num.num_meses_desde_ult_retraso"
+                ],
+                "outputs": [
+                    "num.num_hipotecas",
+                    "num.num_lineas_credito",
+                    "num.num_cancelaciones_12meses",
+                    "num.num_derogatorios",
+                    "num.num_meses_desde_ult_retraso"
+                ],
+                "depende_de": [
+                    "P06"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num[num_imputar_ceros] = num[num_imputar_ceros].astype(int)"
+            },
+            {
+                "paso_id": "P08",
+                "descripcion": "Eliminación de outliers: filas con ingresos > 400000",
+                "inputs": [
+                    "cat",
+                    "num"
+                ],
+                "outputs": [
+                    "cat",
+                    "num"
+                ],
+                "depende_de": [
+                    "P05",
+                    "P07"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "es_transformacion_de_fila": true,
+                "codigo_referencia": "a_eliminar = num.loc[num.ingresos > 400000].index.values; cat = cat[~cat.index.isin(a_eliminar)]; num = num[~num.index.isin(a_eliminar)]"
+            },
+            {
+                "paso_id": "P09",
+                "descripcion": "Clip de dti a [0, 100] → nueva columna DTI",
+                "inputs": [
+                    "num.dti"
+                ],
+                "outputs": [
+                    "num.DTI"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num['DTI'] = np.clip(num['dti'], 0, 100)"
+            },
+            {
+                "paso_id": "P10",
+                "descripcion": "Cap de num_hipotecas a [0, 7]",
+                "inputs": [
+                    "num.num_hipotecas"
+                ],
+                "outputs": [
+                    "num.num_hipotecas"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num['num_hipotecas'] = np.clip(num['num_hipotecas'], 0, 7)"
+            },
+            {
+                "paso_id": "P11",
+                "descripcion": "Cap de porc_uso_revolving a [0, 100]",
+                "inputs": [
+                    "num.porc_uso_revolving"
+                ],
+                "outputs": [
+                    "num.porc_uso_revolving"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num['porc_uso_revolving'] = np.clip(num['porc_uso_revolving'], 0, 100)"
+            },
+            {
+                "paso_id": "P12",
+                "descripcion": "Creación target_pd: 1 si Charged Off / Default",
+                "inputs": [
+                    "cat.estado"
+                ],
+                "outputs": [
+                    "cat.target_pd"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat['target_pd'] = np.where(cat.estado.isin(['Charged Off','Does not meet the credit policy. Status:Charged Off','Default']), 1, 0)"
+            },
+            {
+                "paso_id": "P13",
+                "descripcion": "Drop columna estado de cat",
+                "inputs": [
+                    "cat.estado"
+                ],
+                "outputs": [],
+                "depende_de": [
+                    "P12"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat.drop(columns='estado', inplace=True)"
+            },
+            {
+                "paso_id": "P14",
+                "descripcion": "Creación columna pendiente = principal - imp_amortizado",
+                "inputs": [
+                    "num.principal",
+                    "num.imp_amortizado"
+                ],
+                "outputs": [
+                    "num.pendiente"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num['pendiente'] = num.principal - num.imp_amortizado"
+            },
+            {
+                "paso_id": "P15",
+                "descripcion": "Creación target_ead = pendiente / principal, clampado a [0,1]",
+                "inputs": [
+                    "num.pendiente",
+                    "num.principal"
+                ],
+                "outputs": [
+                    "num.target_ead"
+                ],
+                "depende_de": [
+                    "P14"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num['target_ead'] = num.pendiente / num.principal; num.target_ead = np.where(num.target_ead < 0, 0, num.target_ead); num.target_ead = np.where(num.target_ead > 1, 1, num.target_ead)"
+            },
+            {
+                "paso_id": "P16",
+                "descripcion": "Creación target_lgd = 1 - imp_recuperado/pendiente, clampado a [0,1]",
+                "inputs": [
+                    "num.imp_recuperado",
+                    "num.pendiente"
+                ],
+                "outputs": [
+                    "num.target_lgd"
+                ],
+                "depende_de": [
+                    "P14"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num['target_lgd'] = 1 - (num.imp_recuperado / num.pendiente); num['target_lgd'] = num['target_lgd'].fillna(0); num.target_lgd = np.where(num.target_lgd < 0, 0, num.target_lgd); num.target_lgd = np.where(num.target_lgd > 1, 1, num.target_lgd)"
+            },
+            {
+                "paso_id": "P17",
+                "descripcion": "Drop num_meses_desde_ult_retraso (no entra al modelo)",
+                "inputs": [
+                    "num.num_meses_desde_ult_retraso"
+                ],
+                "outputs": [],
+                "depende_de": [
+                    "P07"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "num.drop(columns='num_meses_desde_ult_retraso', inplace=True)"
+            },
+            {
+                "paso_id": "P18",
+                "descripcion": "Limpieza vivienda: ANY/NONE/OTHER → MORTGAGE",
+                "inputs": [
+                    "cat.vivienda"
+                ],
+                "outputs": [
+                    "cat.vivienda"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat.vivienda = cat.vivienda.replace(['ANY', 'NONE', 'OTHER'], 'MORTGAGE')"
+            },
+            {
+                "paso_id": "P19",
+                "descripcion": "Limpieza finalidad: wedding/educational/renewable_energy → other",
+                "inputs": [
+                    "cat.finalidad"
+                ],
+                "outputs": [
+                    "cat.finalidad"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "cat.finalidad = cat.finalidad.replace(['wedding', 'educational', 'renewable_energy'], 'other')"
+            },
+            {
+                "paso_id": "P20",
+                "descripcion": "OneHotEncoder sobre var_ohe",
+                "inputs": [
+                    "cat.ingresos_verificados",
+                    "cat.vivienda",
+                    "cat.finalidad",
+                    "cat.num_cuotas"
+                ],
+                "outputs": [
+                    "cat_ohe"
+                ],
+                "depende_de": [
+                    "P18",
+                    "P19"
+                ],
+                "tipo_sklearn": "OneHotEncoder",
+                "requiere_fit": true,
+                "codigo_referencia": "ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore'); cat_ohe = pd.DataFrame(ohe.fit_transform(cat[var_ohe]), columns=ohe.get_feature_names_out())"
+            },
+            {
+                "paso_id": "P21",
+                "descripcion": "OrdinalEncoder sobre var_oe (antigüedad_empleo, rating)",
+                "inputs": [
+                    "cat.antigüedad_empleo",
+                    "cat.rating"
+                ],
+                "outputs": [
+                    "cat_oe"
+                ],
+                "depende_de": [
+                    "P05"
+                ],
+                "tipo_sklearn": "OrdinalEncoder",
+                "requiere_fit": true,
+                "codigo_referencia": "oe = OrdinalEncoder(categories=[orden_antigüedad_empleo, orden_rating], handle_unknown='use_encoded_value', unknown_value=-1); cat_oe = pd.DataFrame(oe.fit_transform(cat[var_oe]), columns=nombres_oe)"
+            },
+            {
+                "paso_id": "P22",
+                "descripcion": "Binarizer sobre num_derogatorios",
+                "inputs": [
+                    "num.num_derogatorios"
+                ],
+                "outputs": [
+                    "num_bin"
+                ],
+                "depende_de": [
+                    "P08"
+                ],
+                "tipo_sklearn": "Binarizer",
+                "requiere_fit": false,
+                "codigo_referencia": "bin_ = Binarizer(threshold=0); num_bin = pd.DataFrame(bin_.fit_transform(num[var_bin]), columns=nombres_bin)"
+            },
+            {
+                "paso_id": "P23",
+                "descripcion": "MinMaxScaler sobre cat_oe + 7 vars numéricas",
+                "inputs": [
+                    "cat_oe",
+                    "num.ingresos",
+                    "num.dti",
+                    "num.num_lineas_credito",
+                    "num.porc_uso_revolving",
+                    "num.principal",
+                    "num.tipo_interes",
+                    "num.imp_cuota"
+                ],
+                "outputs": [
+                    "df_mms"
+                ],
+                "depende_de": [
+                    "P21"
+                ],
+                "tipo_sklearn": "MinMaxScaler",
+                "requiere_fit": true,
+                "codigo_referencia": "mms = MinMaxScaler(); df_mms = pd.DataFrame(mms.fit_transform(df_res[var_mms]), columns=nombres_mms)"
+            },
+            {
+                "paso_id": "P24",
+                "descripcion": "Construcción tablón PD (toate las observaciones)",
+                "inputs": [
+                    "num.id_cliente",
+                    "cat_ohe",
+                    "df_mms",
+                    "num_bin",
+                    "cat.target_pd"
+                ],
+                "outputs": [
+                    "df_pd"
+                ],
+                "depende_de": [
+                    "P12",
+                    "P20",
+                    "P22",
+                    "P23"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "df_pd = pd.concat([num[['id_cliente']].reset_index(drop=True), cat_ohe, df_mms, num_bin, cat.reset_index()[['target_pd']]], axis=1).set_index('id_cliente')"
+            },
+            {
+                "paso_id": "P25",
+                "descripcion": "Construcción tablón EAD + filtro target_pd==1",
+                "inputs": [
+                    "cat_ohe",
+                    "df_mms",
+                    "num_bin",
+                    "num.id_cliente",
+                    "num.target_ead",
+                    "cat.target_pd"
+                ],
+                "outputs": [
+                    "df_ead"
+                ],
+                "depende_de": [
+                    "P15",
+                    "P20",
+                    "P22",
+                    "P23"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "es_transformacion_de_fila": true,
+                "codigo_referencia": "df_ead = pd.concat([cat_ohe, df_mms, num_bin, num.reset_index()[['id_cliente','target_ead']], cat.reset_index()[['target_pd']]], axis=1).set_index('id_cliente'); df_ead = df_ead[df_ead.target_pd == 1].drop(columns='target_pd')"
+            },
+            {
+                "paso_id": "P26",
+                "descripcion": "Construcción tablón LGD + filtro target_pd==1",
+                "inputs": [
+                    "cat_ohe",
+                    "df_mms",
+                    "num_bin",
+                    "num.id_cliente",
+                    "num.target_lgd",
+                    "cat.target_pd"
+                ],
+                "outputs": [
+                    "df_lgd"
+                ],
+                "depende_de": [
+                    "P16",
+                    "P20",
+                    "P22",
+                    "P23"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "es_transformacion_de_fila": true,
+                "codigo_referencia": "df_lgd = pd.concat([cat_ohe, df_mms, num_bin, num.reset_index()[['id_cliente','target_lgd']], cat.reset_index()[['target_pd']]], axis=1).set_index('id_cliente'); df_lgd = df_lgd[df_lgd.target_pd == 1].drop(columns='target_pd')"
+            },
+            {
+                "paso_id": "P27",
+                "descripcion": "Train/val split para modelo PD",
+                "inputs": [
+                    "df_pd"
+                ],
+                "outputs": [
+                    "train_x_pd",
+                    "val_x_pd",
+                    "train_y_pd",
+                    "val_y_pd"
+                ],
+                "depende_de": [
+                    "P24"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "train_x, val_x, train_y, val_y = train_test_split(x, y, test_size=0.3)"
+            },
+            {
+                "paso_id": "P28",
+                "descripcion": "Train/val split para modelo EAD",
+                "inputs": [
+                    "df_ead"
+                ],
+                "outputs": [
+                    "train_x_ead",
+                    "val_x_ead",
+                    "train_y_ead",
+                    "val_y_ead"
+                ],
+                "depende_de": [
+                    "P25"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "train_x, val_x, train_y, val_y = train_test_split(x, y, test_size=0.3)"
+            },
+            {
+                "paso_id": "P29",
+                "descripcion": "Train/val split para modelo LGD",
+                "inputs": [
+                    "df_lgd"
+                ],
+                "outputs": [
+                    "train_x_lgd",
+                    "val_x_lgd",
+                    "train_y_lgd",
+                    "val_y_lgd"
+                ],
+                "depende_de": [
+                    "P26"
+                ],
+                "tipo_sklearn": "none",
+                "requiere_fit": false,
+                "codigo_referencia": "train_x, val_x, train_y, val_y = train_test_split(x, y, test_size=0.3)"
+            }
+        ]
+    }
+}

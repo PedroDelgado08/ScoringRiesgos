@@ -1,0 +1,124 @@
+{
+    "app": {
+        "title": "DS4B Risk Score Analyzer",
+        "layout": {
+            "sidebar": {
+                "logo": "path/logo.png",
+                "title": "Simulador de Riesgo Crediticio",
+                "inputs": {
+                    "cliente": {
+                        "type": "selectbox",
+                        "label": "Seleccionar cliente",
+                        "options": []
+                    },
+                    "prestamo": {
+                        "importe": {
+                            "type": "slider",
+                            "label": "Importe (€)",
+                            "min": 1000,
+                            "max": 100000,
+                            "step": 1000,
+                            "default": 20000
+                        },
+                        "tipo_interes": {
+                            "type": "slider",
+                            "label": "Tipo de interés (%)",
+                            "min": 0,
+                            "max": 20,
+                            "step": 0.1,
+                            "default": 5.0
+                        },
+                        "duracion": {
+                            "type": "radio",
+                            "label": "Duración (meses)",
+                            "options": [
+                                12,
+                                24,
+                                36,
+                                48,
+                                60
+                            ],
+                            "default": 60
+                        }
+                    },
+                    "perfil_prestatario": {
+                        "finalidad": {
+                            "type": "selectbox",
+                            "label": "Finalidad",
+                            "options": [
+                                "Consumo",
+                                "Vivienda",
+                                "Vehículo",
+                                "Otros"
+                            ]
+                        },
+                        "situacion_vivienda": {
+                            "type": "radio",
+                            "label": "Situación vivienda",
+                            "options": [
+                                "Hipoteca",
+                                "Propia",
+                                "Alquiler"
+                            ]
+                        }
+                    }
+                },
+                "action": {
+                    "type": "button",
+                    "label": "Calcular riesgo"
+                }
+            },
+            "main": {
+                "resumen": {
+                    "perdida_esperada": {
+                        "label": "Pérdida esperada (€)",
+                        "value": null
+                    },
+                    "riesgo_tipo": {
+                        "label": "Riesgo de tipo",
+                        "value": null,
+                        "categorias": [
+                            "Alto",
+                            "Medio",
+                            "Bajo"
+                        ],
+                        "colores": {
+                            "Alto": "red",
+                            "Medio": "blue",
+                            "Bajo": "green"
+                        }
+                    }
+                },
+                "impacto": {
+                    "perdida_sobre_prestamo": {
+                        "label": "Impacto de la pérdida sobre el préstamo",
+                        "valor_eur_mes": null,
+                        "umbral_sol": null
+                    },
+                    "porcentaje_principal": {
+                        "label": "Porcentaje sobre el principal (%)",
+                        "value": null
+                    }
+                },
+                "metricas_riesgo": {
+                    "pd": {
+                        "label": "Probabilidad de impago (PD)",
+                        "value": null,
+                        "type": "gauge"
+                    },
+                    "ead": {
+                        "label": "Exposición al incumplimiento (EAD)",
+                        "value_pct": null,
+                        "value_eur": null,
+                        "type": "gauge"
+                    },
+                    "lgd": {
+                        "label": "Pérdida dado el impago (LGD)",
+                        "value": null,
+                        "type": "gauge"
+                    }
+                }
+            }
+        }
+    }
+}
