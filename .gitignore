@@ -15,6 +15,7 @@ datos/
 *.csv
 # Permitir el CSV de referencia de la API para despliegue
 !07_despliegue/api/data/demo_03_riesgos.csv
+!02_datos\01_Originales\prestamos.csv
 *.xlsx
 *.parquet
 *.feather
