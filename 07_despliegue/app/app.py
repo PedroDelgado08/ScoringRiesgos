@@ -23,7 +23,7 @@ DEBUG_MODE = False
 # =========================
 PAGE_TITLE = "DRMdata Risk Score Analyzer"
 FAVICON_PATH = os.path.join("assets", "favicon.png")
-LOGO_PATH = os.path.join("assets", "scoringriesgos2.jpg")
+LOGO_PATH = os.path.join("assets", "scoring.jpeg")
 
 st.set_page_config(
     page_title=PAGE_TITLE,
