@@ -21,7 +21,7 @@ DEBUG_MODE = False
 # =========================
 # CONFIGURACIÓN VISUAL
 # =========================
-PAGE_TITLE = "DS4B Risk Score Analyzer"
+PAGE_TITLE = "DRMdata Risk Score Analyzer"
 FAVICON_PATH = os.path.join("assets", "favicon.png")
 LOGO_PATH = os.path.join("assets", "logo_empresa.jpg")
 
