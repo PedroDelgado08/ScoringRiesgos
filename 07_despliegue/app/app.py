@@ -121,7 +121,7 @@ if os.path.exists(DEMO_PATH):
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=220)
-    st.title("Simulador de Riesgo Crediticio")
+    st.title("Simulador de Riesgo Cred")
     st.markdown("---")
     id_cliente = st.selectbox("Seleccionar cliente", options=cliente_ids, index=0)
 
