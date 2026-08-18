@@ -8,7 +8,7 @@ from streamlit_echarts import st_echarts
 # =========================
 # CONFIGURACIÓN TÉCNICA
 # =========================
-API_BASE_URL = "https://caso-riesgos-api.onrender.com"
+API_BASE_URL = "https://scoringriesgos.onrender.com"
 SCORE_ENDPOINT = "/predict"
 WARMUP_ENDPOINT = "/docs"
 DEFAULT_TIMEOUT = 30
