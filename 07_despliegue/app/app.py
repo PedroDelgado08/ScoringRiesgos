@@ -23,7 +23,7 @@ DEBUG_MODE = False
 # =========================
 PAGE_TITLE = "DRMdata Risk Score Analyzer"
 FAVICON_PATH = os.path.join("assets", "favicon.png")
-LOGO_PATH = os.path.join("assets", "logo_empresa.jpg")
+LOGO_PATH = os.path.join("assets", "scoringriesgos2.jpg")
 
 st.set_page_config(
     page_title=PAGE_TITLE,
@@ -121,7 +121,7 @@ if os.path.exists(DEMO_PATH):
 with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=220)
-    st.title("Simulador de Riesgo Cred")
+    st.title("Simulador de Riesgo Crediticio")
     st.markdown("---")
     id_cliente = st.selectbox("Seleccionar cliente", options=cliente_ids, index=0)
 
