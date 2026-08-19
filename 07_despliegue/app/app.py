@@ -52,21 +52,38 @@ def wake_api():
     if not ENABLE_WARMUP:
         return True
     
+    import time
     import streamlit as st
+    
     url = API_BASE_URL.rstrip("/") + "/health"
+    status_text = st.empty()
     
-    # 1. Mostramos en pantalla que lo estamos intentando
-    st.info(f"Haciendo ping a la API en: {url} ...")
-    
-    try:
-        r = requests.get(url, timeout=60)
-        # 2. Si llega, mostramos el código de respuesta
-        st.success(f"¡La API respondió con código {r.status_code}!")
-        return True
-    except Exception as e:
-        # 3. SI FALLA, MOSTRAMOS EL ERROR EXACTO EN ROJO
-        st.error(f"Error crítico al intentar conectar con la API: {str(e)}")
-        return False
+    # Intentaremos hasta 15 veces, esperando 5 segundos entre cada intento (total ~75 seg)
+    for intento in range(1, 16):
+        status_text.info(f"Despertando la API (Intento {intento}/15). Esto puede tardar 1 minuto...")
+        try:
+            r = requests.get(url, timeout=5)
+            
+            if r.status_code == 200:
+                # ¡Éxito! La API ya está arrancada y lista
+                status_text.success("¡API lista! Calculando riesgo...")
+                time.sleep(1) # Pequeña pausa visual
+                status_text.empty() # Limpiamos el mensaje
+                return True
+            else:
+                # Si da 502, la API sigue arrancando. Pasamos al except o seguimos el bucle.
+                pass
+                
+        except Exception:
+            # Si hay error de red (timeout), también es normal durante el arranque.
+            pass
+        
+        # Esperamos 5 segundos antes de volver a tocar la puerta
+        time.sleep(5)
+
+    # Si llegamos aquí, hemos agotado los 15 intentos
+    status_text.error("La API ha tardado demasiado en responder. Por favor, pulsa el botón de nuevo.")
+    return False
         
     
 
