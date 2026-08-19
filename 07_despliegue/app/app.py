@@ -31,20 +31,19 @@ st.set_page_config(
     layout="wide",
 )
 
+import streamlit.components.v1 as components
+
 # =========================
-# WARMUP INICIAL (TOQUE)
+# WARMUP INICIAL (CLIENT-SIDE PING)
 # =========================
-if "init_ping" not in st.session_state:
-    # Usamos session_state para que solo lo haga la primera vez que entra el usuario, 
-    # y no cada vez que mueva un slider.
-    try:
-        # Hacemos una llamada al endpoint /health con solo 1 segundo de paciencia.
-        # Va a fallar (timeout), pero es suficiente para que Render empiece a encender la máquina.
-        requests.get(API_BASE_URL.rstrip("/") + "/health", timeout=1)
-    except Exception:
-        pass # Ignoramos el error, el objetivo era solo "tocar el timbre"
-    
-    st.session_state["init_ping"] = True
+# Creamos un iframe invisible que el navegador del usuario intentará cargar.
+# Esto fuerza al navegador a hacer la petición a la API y mantenerla abierta,
+# obligando a Render a encender la máquina sin bloquear la interfaz de Streamlit.
+components.html(
+    f'<iframe src="{API_BASE_URL.rstrip("/")}/health" width="0" height="0" style="display:none; visibility:hidden;"></iframe>',
+    height=0,
+    width=0,
+)
 
 # =========================
 # CLIENTE HTTP
