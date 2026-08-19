@@ -51,29 +51,24 @@ components.html(
 def wake_api():
     if not ENABLE_WARMUP:
         return True
-    import time
+    
     import streamlit as st
-
-    url = API_BASE_URL.rstrip("/") + WARMUP_ENDPOINT
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    url = API_BASE_URL.rstrip("/") + "/health"
     
-    # Usamos un mensaje en la UI para que el usuario sepa qué pasa
-    status_text = st.empty()
-    status_text.info("Despertando el servidor de la API (esto puede tardar hasta 1 minuto)...")
+    # 1. Mostramos en pantalla que lo estamos intentando
+    st.info(f"Haciendo ping a la API en: {url} ...")
     
-    for attempt in range(WARMUP_RETRIES + 1):
-        try:
-            r = requests.get(url, headers=headers, timeout=WARMUP_TIMEOUT)
-            if r.status_code == 200:
-                status_text.empty() # Borramos el mensaje cuando despierta
-                return True
-        except Exception:
-            # Si da error de conexión, la API sigue apagada. Esperamos 5 segundos.
-            pass
-        time.sleep(5)
+    try:
+        r = requests.get(url, timeout=60)
+        # 2. Si llega, mostramos el código de respuesta
+        st.success(f"¡La API respondió con código {r.status_code}!")
+        return True
+    except Exception as e:
+        # 3. SI FALLA, MOSTRAMOS EL ERROR EXACTO EN ROJO
+        st.error(f"Error crítico al intentar conectar con la API: {str(e)}")
+        return False
         
-    status_text.warning("La API está tardando demasiado en responder.")
-    return False
+    
 
 
 def post_scoring(payload):
