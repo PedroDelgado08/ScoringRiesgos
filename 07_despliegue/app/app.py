@@ -8,11 +8,11 @@ from streamlit_echarts import st_echarts
 # =========================
 # CONFIGURACIÓN TÉCNICA
 # =========================
-API_BASE_URL = "https://scoringriesgos.onrender.com"
+API_BASE_URL = "https://caso-riesgos-api.onrender.com"
 SCORE_ENDPOINT = "/predict"
 WARMUP_ENDPOINT = "/docs"
-DEFAULT_TIMEOUT = 120
-WARMUP_TIMEOUT = 60
+DEFAULT_TIMEOUT = 30
+WARMUP_TIMEOUT = 10
 ENABLE_WARMUP = True
 WARMUP_RETRIES = 1
 SCORING_RETRIES = 1
@@ -31,55 +31,22 @@ st.set_page_config(
     layout="wide",
 )
 
-import streamlit.components.v1 as components
-
-# =========================
-# WARMUP INICIAL (CLIENT-SIDE PING)
-# =========================
-# Creamos un iframe invisible que el navegador del usuario intentará cargar.
-# Esto fuerza al navegador a hacer la petición a la API y mantenerla abierta,
-# obligando a Render a encender la máquina sin bloquear la interfaz de Streamlit.
-components.html(
-    f'<iframe src="{API_BASE_URL.rstrip("/")}/health" width="0" height="0" style="display:none; visibility:hidden;"></iframe>',
-    height=0,
-    width=0,
-)
-
 # =========================
 # CLIENTE HTTP
 # =========================
 def wake_api():
     if not ENABLE_WARMUP:
         return True
-    
     import time
-    import streamlit as st
-    
-    url = API_BASE_URL.rstrip("/") + "/health"
-    status_text = st.empty()
-    
-    # Aumentamos a 36 intentos (aprox. 3 minutos de paciencia)
-    max_intentos = 36
-    
-    for intento in range(1, max_intentos + 1):
-        status_text.info(f"Despertando la API (Intento {intento}/{max_intentos}). Esto puede tardar unos 2-3 minutos...")
-        try:
-            # Ponemos timeout de 5s para que no se quede colgado si Render no responde
-            r = requests.get(url, timeout=5)
-            
-            if r.status_code == 200:
-                status_text.success("¡API lista! Calculando riesgo...")
-                time.sleep(1)
-                status_text.empty()
-                return True
-                
-        except Exception:
-            pass
-        
-        # Esperamos 5 segundos antes del siguiente intento
-        time.sleep(5)
 
-    status_text.error("La API no ha logrado despertar después de 3 minutos. Intenta de nuevo.")
+    url = API_BASE_URL.rstrip("/") + WARMUP_ENDPOINT
+    for _ in range(WARMUP_RETRIES + 1):
+        try:
+            r = requests.get(url, timeout=WARMUP_TIMEOUT)
+            if r.status_code in (200, 204):
+                return True
+        except Exception:
+            time.sleep(2)
     return False
         
     
