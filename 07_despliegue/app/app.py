@@ -45,7 +45,7 @@ def wake_api():
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     for _ in range(WARMUP_RETRIES + 1):
         try:
-            r = requests.get(url, headers=headers, timeout=WARMUP_TIMEOUT, headers=headers)
+            r = requests.get(url, headers=headers, timeout=WARMUP_TIMEOUT)
             if r.status_code in (200, 204):
                 return True
         except Exception:
