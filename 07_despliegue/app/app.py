@@ -45,7 +45,7 @@ if "init_ping" not in st.session_state:
         pass # Ignoramos el error, el objetivo era solo "tocar el timbre"
     
     st.session_state["init_ping"] = True
-    
+
 # =========================
 # CLIENTE HTTP
 # =========================
@@ -53,17 +53,27 @@ def wake_api():
     if not ENABLE_WARMUP:
         return True
     import time
+    import streamlit as st
 
     url = API_BASE_URL.rstrip("/") + WARMUP_ENDPOINT
-    # Simulamos ser un navegador real para que Render no corte la conexión
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    for _ in range(WARMUP_RETRIES + 1):
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    
+    # Usamos un mensaje en la UI para que el usuario sepa qué pasa
+    status_text = st.empty()
+    status_text.info("Despertando el servidor de la API (esto puede tardar hasta 1 minuto)...")
+    
+    for attempt in range(WARMUP_RETRIES + 1):
         try:
             r = requests.get(url, headers=headers, timeout=WARMUP_TIMEOUT)
-            if r.status_code in (200, 204):
+            if r.status_code == 200:
+                status_text.empty() # Borramos el mensaje cuando despierta
                 return True
         except Exception:
-            time.sleep(2)
+            # Si da error de conexión, la API sigue apagada. Esperamos 5 segundos.
+            pass
+        time.sleep(5)
+        
+    status_text.warning("La API está tardando demasiado en responder.")
     return False
 
 
