@@ -31,7 +31,21 @@ st.set_page_config(
     layout="wide",
 )
 
-
+# =========================
+# WARMUP INICIAL (TOQUE)
+# =========================
+if "init_ping" not in st.session_state:
+    # Usamos session_state para que solo lo haga la primera vez que entra el usuario, 
+    # y no cada vez que mueva un slider.
+    try:
+        # Hacemos una llamada al endpoint /health con solo 1 segundo de paciencia.
+        # Va a fallar (timeout), pero es suficiente para que Render empiece a encender la máquina.
+        requests.get(API_BASE_URL.rstrip("/") + "/health", timeout=1)
+    except Exception:
+        pass # Ignoramos el error, el objetivo era solo "tocar el timbre"
+    
+    st.session_state["init_ping"] = True
+    
 # =========================
 # CLIENTE HTTP
 # =========================
