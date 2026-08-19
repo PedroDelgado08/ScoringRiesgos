@@ -41,9 +41,11 @@ def wake_api():
     import time
 
     url = API_BASE_URL.rstrip("/") + WARMUP_ENDPOINT
+    # Simulamos ser un navegador real para que Render no corte la conexión
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     for _ in range(WARMUP_RETRIES + 1):
         try:
-            r = requests.get(url, timeout=WARMUP_TIMEOUT)
+            r = requests.get(url, headers=headers, timeout=WARMUP_TIMEOUT, headers=headers)
             if r.status_code in (200, 204):
                 return True
         except Exception:
