@@ -11,7 +11,7 @@ from streamlit_echarts import st_echarts
 API_BASE_URL = "https://scoringriesgos.onrender.com"
 SCORE_ENDPOINT = "/predict"
 WARMUP_ENDPOINT = "/docs"
-DEFAULT_TIMEOUT = 60
+DEFAULT_TIMEOUT = 120
 WARMUP_TIMEOUT = 60
 ENABLE_WARMUP = True
 WARMUP_RETRIES = 1
@@ -58,31 +58,28 @@ def wake_api():
     url = API_BASE_URL.rstrip("/") + "/health"
     status_text = st.empty()
     
-    # Intentaremos hasta 15 veces, esperando 5 segundos entre cada intento (total ~75 seg)
-    for intento in range(1, 16):
-        status_text.info(f"Despertando la API (Intento {intento}/15). Esto puede tardar 1 minuto...")
+    # Aumentamos a 36 intentos (aprox. 3 minutos de paciencia)
+    max_intentos = 36
+    
+    for intento in range(1, max_intentos + 1):
+        status_text.info(f"Despertando la API (Intento {intento}/{max_intentos}). Esto puede tardar unos 2-3 minutos...")
         try:
+            # Ponemos timeout de 5s para que no se quede colgado si Render no responde
             r = requests.get(url, timeout=5)
             
             if r.status_code == 200:
-                # ¡Éxito! La API ya está arrancada y lista
                 status_text.success("¡API lista! Calculando riesgo...")
-                time.sleep(1) # Pequeña pausa visual
-                status_text.empty() # Limpiamos el mensaje
+                time.sleep(1)
+                status_text.empty()
                 return True
-            else:
-                # Si da 502, la API sigue arrancando. Pasamos al except o seguimos el bucle.
-                pass
                 
         except Exception:
-            # Si hay error de red (timeout), también es normal durante el arranque.
             pass
         
-        # Esperamos 5 segundos antes de volver a tocar la puerta
+        # Esperamos 5 segundos antes del siguiente intento
         time.sleep(5)
 
-    # Si llegamos aquí, hemos agotado los 15 intentos
-    status_text.error("La API ha tardado demasiado en responder. Por favor, pulsa el botón de nuevo.")
+    status_text.error("La API no ha logrado despertar después de 3 minutos. Intenta de nuevo.")
     return False
         
     
