@@ -11,8 +11,8 @@ from streamlit_echarts import st_echarts
 API_BASE_URL = "https://scoringriesgos.onrender.com"
 SCORE_ENDPOINT = "/predict"
 WARMUP_ENDPOINT = "/docs"
-DEFAULT_TIMEOUT = 30
-WARMUP_TIMEOUT = 10
+DEFAULT_TIMEOUT = 60
+WARMUP_TIMEOUT = 60
 ENABLE_WARMUP = True
 WARMUP_RETRIES = 1
 SCORING_RETRIES = 1
