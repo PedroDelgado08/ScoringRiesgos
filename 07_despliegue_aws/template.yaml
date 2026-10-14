@@ -1,0 +1,214 @@
+# =====================================================================
+# template.yaml - AWS SAM template for the Credit Risk Scoring demo
+# ---------------------------------------------------------------------
+# Describes ALL the infrastructure as code (CloudFormation):
+#   - API: FastAPI in a Lambda function (Docker image) behind API Gateway
+#   - Web: private S3 bucket served by CloudFront (HTTPS)
+#   - Domain: scoring.drm-data.com (ACM certificate + Route 53 record)
+# Workflow: edit THIS file -> sam build -> sam deploy.
+# (.aws-sam/build/template.yaml is a generated copy: do not edit it)
+# =====================================================================
+
+# CloudFormation format version (always this value)
+AWSTemplateFormatVersion: "2010-09-09"
+# Enables SAM: allows shorthand types (AWS::Serverless::*) that
+# CloudFormation expands into standard resources at deploy time
+Transform: AWS::Serverless-2016-10-31
+# Stack description (shown in the CloudFormation console)
+Description: Demo Scoring de Riesgos - API FastAPI en Lambda (Docker) + web estatica en S3/CloudFront
+
+# Parameters: configurable values of the template (like the arguments
+# of a function). They can be overridden at deploy time with --parameter-overrides
+Parameters:
+  # Subdomain used to access the demo
+  DominioWeb:
+    Type: String
+    Default: scoring.drm-data.com
+  # HTTPS certificate (ACM). Must be in us-east-1: CloudFront only reads from there
+  CertificadoArn:
+    Type: String
+    # No default value: passed at deploy time (see samconfig.toml.example)
+  # Route 53 hosted zone of drm-data.com, where the DNS record is created
+  ZonaHospedadaId:
+    Type: String
+    # No default value: passed at deploy time (see samconfig.toml.example)
+
+# Resources: the AWS resources to create. Each one has a logical
+# name (e.g. ScoringApi), a Type and its Properties
+Resources:
+  # ============================================================ API
+  # API Gateway HTTP API: receives requests from the internet and forwards them to Lambda
+  ScoringApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      DefaultRouteSettings:
+        # Anti-abuse limits: maximum burst and per-second requests
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+
+  # Lambda function that runs the scoring API (FastAPI + ML model)
+  ScoringFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      # Packaged as a Docker image (instead of a code zip)
+      PackageType: Image
+      # Processor architecture; must match the Docker image's
+      Architectures: [x86_64]
+      # Memory in MB. In Lambda, CPU is proportional to memory
+      MemorySize: 1024
+      # Maximum seconds per request (29 is the API Gateway limit)
+      Timeout: 29
+      # Environment variables read by the Python code (os.getenv)
+      Environment:
+        Variables:
+          # Web origins allowed by CORS (main.py splits them by commas):
+          # the cloudfront.net URL and the custom domain. !Sub replaces ${...}
+          ALLOWED_ORIGINS: !Sub "https://${WebDistribution.DomainName},https://${DominioWeb}"
+      # Events that trigger the function
+      Events:
+        Api:
+          Type: HttpApi
+          Properties:
+            # Connects the function to the HTTP API defined above (!Ref = reference)
+            ApiId: !Ref ScoringApi
+            # Any path (/health, /predict, ...) reaches the function
+            Path: /{proxy+}
+            # Any HTTP method (GET, POST, OPTIONS...)
+            Method: ANY
+    # Metadata used by sam build to build the Docker image
+    Metadata:
+      # Dockerfile name
+      Dockerfile: Dockerfile
+      # Folder Docker uses as the build context
+      DockerContext: ./api
+      # Image version tag
+      DockerTag: v1
+
+  # CloudWatch log group with the name Lambda expects
+  ScoringLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      # Standard Lambda name: /aws/lambda/<function name>
+      LogGroupName: !Sub /aws/lambda/${ScoringFunction}
+      # Deletes logs after 7 days (avoids accumulating cost)
+      RetentionInDays: 7
+
+  # ============================================================ Static website
+  # S3 bucket that stores the website files (HTML, CSS, JS, images)
+  WebBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # Blocks all public access: only CloudFront can read the bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # Origin Access Control: lets CloudFront read the private bucket
+  # by signing its requests (SigV4)
+  WebOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub ${AWS::StackName}-oac
+        OriginAccessControlOriginType: s3
+        # Always sign requests to S3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  # CloudFront distribution: CDN that serves the website over HTTPS from cache
+  WebDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        # Distribution enabled
+        Enabled: true
+        Comment: Demo Scoring de Riesgos
+        # File served when the site root (/) is requested
+        DefaultRootObject: index.html
+        # Uses only the cheapest edge locations (Europe and North America)
+        PriceClass: PriceClass_100
+        # Additional domain names for which CloudFront accepts requests
+        Aliases:
+          - !Ref DominioWeb
+        # Certificate CloudFront presents to the browser
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificadoArn
+          # sni-only: free mode (the browser sends the domain in the TLS handshake)
+          SslSupportMethod: sni-only
+          # Rejects old, insecure TLS versions
+          MinimumProtocolVersion: TLSv1.2_2021        
+        # Origins: where CloudFront gets the files from (here, the S3 bucket)
+        Origins:
+          - Id: web
+            DomainName: !GetAtt WebBucket.RegionalDomainName
+            # Uses the OAC above to access the bucket (!GetAtt = attribute of a resource)
+            OriginAccessControlId: !GetAtt WebOAC.Id
+            S3OriginConfig:
+              # Empty: OAC, the modern method, is used instead of the legacy OAI
+              OriginAccessIdentity: ""
+        # Default behavior for all paths
+        DefaultCacheBehavior:
+          TargetOriginId: web
+          # Redirects HTTP to HTTPS
+          ViewerProtocolPolicy: redirect-to-https
+          # Compresses responses (gzip/brotli)
+          Compress: true
+          # Id of the AWS managed policy 'CachingOptimized'
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6
+
+  # Bucket policy: grants read access ONLY to this CloudFront distribution
+  WebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            # Who: the CloudFront service
+            Principal: { Service: cloudfront.amazonaws.com }
+            # What it can do: read objects
+            Action: s3:GetObject
+            # On what: all objects in the bucket
+            Resource: !Sub ${WebBucket.Arn}/*
+            # Condition: only if the request comes from THIS distribution (not another one)
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:aws:cloudfront::${AWS::AccountId}:distribution/${WebDistribution}
+
+  # DNS record: resolves scoring.drm-data.com to the CloudFront distribution
+  RegistroWeb:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      # Route 53 hosted zone where the record is created
+      HostedZoneId: !Ref ZonaHospedadaId
+      # Record name (the subdomain)
+      Name: !Ref DominioWeb
+      # Type A with AliasTarget: points directly to an AWS resource, no per-query cost
+      Type: A
+      AliasTarget:
+        # Target: the distribution's cloudfront.net domain
+        DNSName: !GetAtt WebDistribution.DomainName
+        # Fixed AWS Id that identifies all CloudFront distributions
+        # (it is not your hosted zone's Id)
+        HostedZoneId: Z2FDTNDATAQYW2
+
+
+# Outputs: values CloudFormation shows when finished and that deploy.ps1 reads
+Outputs:
+  # Base URL of the API
+  ApiUrl:
+    Value: !Sub https://${ScoringApi}.execute-api.${AWS::Region}.amazonaws.com
+  # Website URL on the CloudFront domain
+  WebUrl:
+    Value: !Sub https://${WebDistribution.DomainName}
+  # Bucket name (deploy.ps1 uploads the files here)
+  WebBucketName:
+    Value: !Ref WebBucket
+  # Distribution Id (deploy.ps1 invalidates its cache)
+  DistributionId:
+    Value: !Ref WebDistribution
+  # Website URL on the custom domain
+  WebUrlDominio:
+    Value: !Sub https://${DominioWeb}    

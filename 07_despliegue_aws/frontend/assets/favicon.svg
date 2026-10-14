@@ -1,0 +1,7 @@
+<!-- Favicon DRMdata: mismo icono que la marca de la cabecera (1.1.a).
+     Colores fijos: un archivo SVG independiente no ve las variables CSS. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="8" fill="#1f5fbf"/>
+  <path d="M9 22v-4 M14 22v-8 M19 22v-6 M24 22V10"
+        fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+</svg>

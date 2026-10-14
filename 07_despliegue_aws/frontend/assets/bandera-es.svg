@@ -1,0 +1,6 @@
+<!-- Bandera de España (versión sin escudo), proporción 3:2.
+     viewBox = sistema de coordenadas interno: 750 de ancho × 500 de alto -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 750 500">
+  <rect width="750" height="500" fill="#AA151B"/>          <!-- fondo rojo -->
+  <rect y="125" width="750" height="250" fill="#F1BF00"/>  <!-- franja amarilla central (doble de ancha) -->
+</svg>

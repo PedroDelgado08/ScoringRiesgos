@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<!-- =====================================================================
+     index.html · Credit Risk Scoring demo
+     ---------------------------------------------------------------------
+     STRUCTURE of the page: which elements exist and in what order.
+       · The LOOK is in styles.css
+       · The BEHAVIOR (calling the API, painting results) is in app.js
+       · The TEXTS in both languages are in i18n.js
+
+     SECTION MAP (styles.css and app.js use the same numbering)
+       0. <head>       Metadata and links to CSS and JS (not visible)
+       1. Header       Title + API status + language selector
+       2. Form         Loan data sent to /predict
+       3. Results      Expected loss and PD, EAD, LGD parameters
+       4. Methodology  Short explanation of the calculation
+       5. Footer       Demo notice
+
+     [i18n] TRANSLATION
+       data-i18n="key"       → i18n.js changes the element's TEXT
+       data-i18n-html="key"  → same, for formatted texts (<b>…</b>)
+       The Spanish text is written here: if the JavaScript failed, the
+       page would still display correctly in Spanish.
+     ===================================================================== -->
+<html lang="es">
+
+<!-- =====================================================================
+     0. HEAD · Information for the browser; none of this is visible
+     ===================================================================== -->
+<head>
+  <!-- UTF-8 encoding: without it «ñ», «ü» or «€» may show up broken -->
+  <meta charset="utf-8">
+
+  <!-- Fit the width to the device; without it, on mobile the page
+       would look like a miniature desktop -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Browser tab text [i18n] -->
+  <title data-i18n="meta.titulo">Scoring de Riesgos · DRMdata</title>
+  
+  <!-- Tab icon. Once declared, the browser stops requesting
+       /favicon.ico (which does not exist, and the private bucket answers 403) -->
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- LOAD ORDER (it matters):
+       1. config.js → API URL
+       2. i18n.js   → dictionary and t() function that app.js will use
+       3. app.js    → page logic
+       defer = "download it now, but run it when the HTML is
+       complete". Scripts with defer run in the order in which they
+       appear, so i18n.js always runs before app.js. -->
+  <script src="config.js"></script>
+  <script src="i18n.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+
+<body>
+
+  <!-- ===================================================================
+       1. HEADER
+       =================================================================== -->
+  <header class="cabecera">
+    <!-- .contenedor: limits the width and centers the content (see CSS) -->
+    <div class="contenedor cabecera-interior">
+
+      <!-- 1.1 Brand + title and subtitle
+           Usual "product within a brand" structure:
+           [DRMdata logo] | Scoring de Riesgos
+           The brand is a link to the main DRMdata website. -->
+      <div class="cabecera-marca">
+
+        <!-- 1.1.a DRMdata brand
+             ⚠ SET the href to your website's real address (Route 53 domain).
+             The icon is an "inline" SVG (written inside the HTML): this way the
+             CSS can change its colors in light/dark mode, which cannot
+             be done with an <img>.
+             aria-hidden="true": the icon is decorative; the text already says "DRMdata". -->
+        <a class="marca" href="https://drm-data.com" title="DRMdata">
+          <svg class="marca-logo" viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="8"/>             <!-- rounded background square -->
+            <path d="M9 22v-4 M14 22v-8 M19 22v-6 M24 22V10"/> <!-- four data bars -->
+          </svg>
+          <span class="marca-texto"><b>DRM</b><span>data</span></span>
+        </a>
+
+        <!-- Vertical line between the brand and the product name -->
+        <span class="cabecera-separador" aria-hidden="true"></span>
+
+        <!-- 1.1.b Product title and subtitle -->
+        <div>
+          <h1 class="titulo" data-i18n="cab.titulo">Scoring de Riesgos</h1>
+          <p class="subtitulo" data-i18n="cab.subtitulo">Pérdida esperada de un préstamo con tres modelos de machine learning</p>
+        </div>
+
+      </div>
+
+      <!-- Right-hand group of the header: status + languages -->
+      <div class="cabecera-acciones">
+
+        <!-- 1.2 API status indicator
+             app.js changes its class (cargando / ok / error), which the CSS
+             paints amber, green or red, and also its text. This is where the
+             cold start shows: "Iniciando el modelo…" → "Modelo listo".
+             role="status": screen readers announce the change.
+             No data-i18n: app.js sets the text in the active language. -->
+        <div class="estado cargando" id="estado" role="status">
+          <span class="estado-punto"></span>
+          <span id="estado-texto">Iniciando el modelo…</span>
+        </div>
+
+        <!-- 1.3 Language selector [i18n]
+             type="button": does NOT submit forms, it only runs its action.
+             data-idioma: the language each button activates (read by i18n.js).
+             aria-pressed: indicates which one is active (i18n.js updates it;
+             the CSS uses it to highlight the active button).
+             title: text on mouse hover, always in its own language
+             (convention: a language's name is written in that language).
+             alt="" on the images: they are decorative, the ES/EN text already
+             explains the button. width/height: provisional size until
+             the CSS is loaded. -->
+        <div class="idiomas" role="group" aria-label="Idioma / Language">
+          <button type="button" class="idioma" data-idioma="es" aria-pressed="true" title="Castellano">
+            <img src="assets/bandera-es.svg" alt="" width="24" height="16"><span>ES</span>
+          </button>
+          <button type="button" class="idioma" data-idioma="en" aria-pressed="false" title="English">
+            <img src="assets/bandera-gb.svg" alt="" width="24" height="16"><span>EN</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- <main>: the main content. .rejilla splits it into two columns
+       (form | results) on wide screens, and into a single
+       column on mobile (see CSS). -->
+  <main class="contenedor rejilla">
+
+    <!-- =================================================================
+         2. FORM · Data sent to POST /predict
+         Each field maps to a field of RegistroEntrada (schemas.py)
+         =================================================================
+         <label for="X"> is bound to the field with id="X": clicking
+         the text activates the field, and screen readers know
+         what each thing is. -->
+    <form class="tarjeta" id="formulario">
+      <h2 class="tarjeta-titulo" data-i18n="form.titulo">Datos de la operación</h2>
+
+      <!-- 2.1 Client → id_cliente
+           The options are NOT written here: app.js fills them with the
+           response of GET /clientes. This option is only provisional. -->
+      <div class="campo">
+        <label for="id_cliente" data-i18n="form.cliente">Cliente</label>
+        <select id="id_cliente">
+          <option value="" data-i18n="form.cargandoClientes">Cargando clientes…</option>
+        </select>
+      </div>
+
+      <!-- 2.2 Client profile (read only, data from clientes.csv)
+           <dl> = description list: term (<dt>) / value (<dd>) pairs.
+           hidden = hidden until app.js has a client to show.
+           The terms are translated; the values (<dd>) are set by app.js. -->
+      <dl class="perfil" id="perfil" hidden>
+        <div><dt data-i18n="perfil.rating">Rating</dt>                 <dd id="perfil-rating">–</dd></div>
+        <div><dt data-i18n="perfil.ingresos">Ingresos anuales</dt>     <dd id="perfil-ingresos">–</dd></div>
+        <div><dt data-i18n="perfil.dti">DTI</dt>                       <dd id="perfil-dti">–</dd></div>
+        <div><dt data-i18n="perfil.antiguedad">Antigüedad laboral</dt> <dd id="perfil-antiguedad">–</dd></div>
+      </dl>
+
+      <!-- 2.3 Amount → principal
+           type="range" = slider. min/max/step limit the values, so
+           the user cannot send something the API would reject (gt=0).
+           <output> shows the chosen value; it is updated by app.js, which
+           also applies the language's number format (20.000 € / €20,000). -->
+      <div class="campo">
+        <div class="campo-cabecera">
+          <label for="principal" data-i18n="form.importe">Importe solicitado</label>
+          <output id="principal-valor" for="principal">20.000 €</output>
+        </div>
+        <input type="range" id="principal" min="1000" max="40000" step="500" value="20000">
+        <div class="campo-leyenda"><span>1.000 €</span><span>40.000 €</span></div>
+      </div>
+
+      <!-- 2.4 Interest rate → tipo_interes
+           Minimum 5 %, never 0: the French amortization formula in
+           scoring.py divides by zero with 0 interest. -->
+      <div class="campo">
+        <div class="campo-cabecera">
+          <label for="tipo_interes" data-i18n="form.tipo">Tipo de interés anual</label>
+          <output id="tipo-valor" for="tipo_interes">12,0 %</output>
+        </div>
+        <input type="range" id="tipo_interes" min="5" max="30" step="0.1" value="12">
+        <div class="campo-leyenda"><span>5 %</span><span>30 %</span></div>
+      </div>
+
+      <!-- 2.5 Term → num_cuotas
+           Only 36 or 60: the model treats the term as a category
+           (" 36 months") and only those two existed in training.
+           Radios with the same name = only one can be checked.
+           <fieldset> + <legend> group options under a title.
+           The text goes in its own <span>: if the whole <label> were
+           translated, the <input> inside it would be erased. -->
+      <fieldset class="campo">
+        <legend data-i18n="form.plazo">Plazo</legend>
+        <div class="segmentado">
+          <label><input type="radio" name="num_cuotas" value="36" checked><span data-i18n="form.meses36">36 meses</span></label>
+          <label><input type="radio" name="num_cuotas" value="60"><span data-i18n="form.meses60">60 meses</span></label>
+        </div>
+      </fieldset>
+
+      <!-- 2.6 Purpose and housing → finalidad, vivienda
+           value = the EXACT category the model was trained with (in
+           English) and it is NEVER translated: it is what gets sent to the API.
+           Only the visible text of each option is translated. -->
+      <div class="campo-fila">
+        <div class="campo">
+          <label for="finalidad" data-i18n="form.finalidad">Finalidad</label>
+          <select id="finalidad">
+            <option value="debt_consolidation" data-i18n="fin.debt_consolidation">Reunificación de deudas</option>
+            <option value="credit_card"        data-i18n="fin.credit_card">Tarjeta de crédito</option>
+            <option value="home_improvement"   data-i18n="fin.home_improvement">Reformas del hogar</option>
+            <option value="major_purchase"     data-i18n="fin.major_purchase">Compra importante</option>
+            <option value="car"                data-i18n="fin.car">Vehículo</option>
+            <option value="small_business"     data-i18n="fin.small_business">Pequeño negocio</option>
+            <option value="medical"            data-i18n="fin.medical">Gastos médicos</option>
+            <option value="moving"             data-i18n="fin.moving">Mudanza</option>
+            <option value="house"              data-i18n="fin.house">Compra de vivienda</option>
+            <option value="vacation"           data-i18n="fin.vacation">Viajes</option>
+            <option value="other"              data-i18n="fin.other">Otros</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label for="vivienda" data-i18n="form.vivienda">Vivienda</label>
+          <select id="vivienda">
+            <option value="RENT"     data-i18n="viv.RENT">En alquiler</option>
+            <option value="MORTGAGE" data-i18n="viv.MORTGAGE">Con hipoteca</option>
+            <option value="OWN"      data-i18n="viv.OWN">En propiedad</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 2.7 Estimated monthly installment
+           Computed by app.js in the browser (same formula as scoring.py),
+           without calling the API: it updates when any control moves.
+           The fixed text goes in its own <span> for the same reason as in 2.5. -->
+      <p class="cuota">
+        <span data-i18n="form.cuota">Cuota mensual estimada</span>
+        <strong id="cuota">–</strong>
+      </p>
+
+      <!-- 2.8 Submit button
+           type="submit": when pressed, the form fires the
+           "submit" event, which app.js intercepts to call /predict.
+           disabled: disabled until the clients are loaded.
+           No data-i18n: app.js changes its text ("Evaluando…"). -->
+      <button type="submit" class="boton" id="boton" disabled>Evaluar operación</button>
+    </form>
+
+    <!-- =================================================================
+         3. RESULTS · Response of POST /predict (ScoringSalida)
+         Only one of 3.1 / 3.3 is visible at a time; app.js decides which
+         one with the hidden attribute. 3.2 appears only if something fails.
+         aria-live="polite": screen readers read the changes.
+         ================================================================= -->
+    <section class="resultados" aria-live="polite">
+
+      <!-- 3.1 Empty state: what is shown before the first evaluation -->
+      <div class="tarjeta vacio" id="vacio">
+        <p data-i18n-html="res.vacio">Configura la operación y pulsa <b>Evaluar operación</b>.</p>
+      </div>
+
+      <!-- 3.2 Error message (API down, 404, 422…); written by app.js -->
+      <div class="aviso-error" id="error" role="alert" hidden></div>
+
+      <!-- 3.3 Result -->
+      <div id="resultado" hidden>
+
+        <!-- 3.3.1 Expected loss: the main figure
+             In euros = perdida_esperada × amount; in % = perdida_esperada -->
+        <div class="tarjeta destacado">
+          <p class="destacado-etiqueta" data-i18n="res.pe">Pérdida esperada</p>
+          <p class="destacado-valor" id="pe-euros">–</p>
+          <p class="destacado-pie" id="pe-porcentaje">–</p>
+        </div>
+
+        <!-- 3.3.2 Risk parameters: PD, EAD and LGD
+             The three blocks have the SAME structure (text + bar);
+             app.js fills in the value and sets the bar width (0-100 %). -->
+        <div class="tarjeta">
+          <h2 class="tarjeta-titulo" data-i18n="res.parametros">Parámetros de riesgo</h2>
+
+          <div class="parametro">
+            <div class="parametro-cabecera">
+              <span data-i18n-html="res.pd"><b>PD</b> · Probabilidad de impago</span>
+              <span id="pd-valor">–</span>
+            </div>
+            <div class="barra"><div class="barra-relleno" id="pd-barra"></div></div>
+          </div>
+
+          <div class="parametro">
+            <div class="parametro-cabecera">
+              <span data-i18n-html="res.ead"><b>EAD</b> · Exposición en el impago</span>
+              <span id="ead-valor">–</span>
+            </div>
+            <div class="barra"><div class="barra-relleno" id="ead-barra"></div></div>
+          </div>
+
+          <div class="parametro">
+            <div class="parametro-cabecera">
+              <span data-i18n-html="res.lgd"><b>LGD</b> · Severidad de la pérdida</span>
+              <span id="lgd-valor">–</span>
+            </div>
+            <div class="barra"><div class="barra-relleno" id="lgd-barra"></div></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================================================================
+       4. METHODOLOGY · Fixed text, no interaction
+       =================================================================== -->
+  <section class="contenedor metodologia">
+    <h2 data-i18n="met.titulo">Metodología</h2>
+    <p class="formula" data-i18n-html="met.formula">Pérdida esperada (€) = <b>PD</b> × <b>EAD</b> × <b>LGD</b> × Importe</p>
+    <ul>
+      <li data-i18n-html="met.pd"><b>PD</b> (Probability of Default): probabilidad de que el cliente no pague. Modelo de clasificación.</li>
+      <li data-i18n-html="met.ead"><b>EAD</b> (Exposure at Default): parte del importe pendiente en el momento del impago. Modelo de regresión.</li>
+      <li data-i18n-html="met.lgd"><b>LGD</b> (Loss Given Default): parte de esa exposición que no se recupera. Modelo de regresión.</li>
+    </ul>
+  </section>
+
+  <!-- ===================================================================
+       5. FOOTER
+       =================================================================== -->
+  <footer class="pie">
+    <div class="contenedor" data-i18n="pie.texto">
+      Proyecto demostrativo de data science · Datos anonimizados · No es una decisión de crédito real.
+    </div>
+  </footer>
+
+</body>
+</html>

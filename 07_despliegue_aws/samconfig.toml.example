@@ -1,0 +1,28 @@
+# =====================================================================
+# samconfig.toml.example - sam deploy configuration (template)
+# ---------------------------------------------------------------------
+# Copy this file as samconfig.toml and replace the values between
+# <...> with those of your AWS account. samconfig.toml is NOT pushed to Git
+# (it is in .gitignore) because it identifies your account.
+# =====================================================================
+version = 0.1
+
+[default.deploy.parameters]
+# CloudFormation stack name
+stack_name = "scoring-riesgos-demo"
+# SAM creates and manages the bucket where it uploads the template
+resolve_s3 = true
+s3_prefix = "scoring-riesgos-demo"
+region = "eu-central-1"
+# Asks for confirmation before applying changes (recommended)
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+# ECR repository for the Docker image (created by "sam deploy --guided")
+image_repositories = ["ScoringFunction=<CUENTA>.dkr.ecr.eu-central-1.amazonaws.com/<REPOSITORIO>"]
+# template.yaml parameters that have no default value:
+#   CertificadoArn  : ACM certificate ARN (must be in us-east-1)
+#   ZonaHospedadaId : Id of your domain's Route 53 hosted zone
+parameter_overrides = "CertificadoArn=<ARN_DEL_CERTIFICADO> ZonaHospedadaId=<ID_ZONA_ROUTE53>"
+
+[default.global.parameters]
+region = "eu-central-1"

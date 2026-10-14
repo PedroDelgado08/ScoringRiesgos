@@ -1,0 +1,10 @@
+{
+  "version": "2.0",
+  "routeKey": "$default",
+  "rawPath": "/predict",
+  "rawQueryString": "",
+  "headers": {"host": "localhost", "content-type": "application/json"},
+  "requestContext": {"http": {"method": "POST", "path": "/predict", "protocol": "HTTP/1.1", "sourceIp": "127.0.0.1"}},
+  "body": "[{\"id_cliente\": 7055704, \"principal\": 10000, \"tipo_interes\": 4.5, \"num_cuotas\": 36, \"finalidad\": \"car\", \"vivienda\": \"RENT\"}]",
+  "isBase64Encoded": false
+}
