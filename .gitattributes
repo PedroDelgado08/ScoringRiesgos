@@ -1,0 +1,2 @@
+# Normalizes line endings (avoids Windows/Linux noise in commits)
+* text=auto
