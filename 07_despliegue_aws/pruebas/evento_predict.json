@@ -3,8 +3,18 @@
   "routeKey": "$default",
   "rawPath": "/predict",
   "rawQueryString": "",
-  "headers": {"host": "localhost", "content-type": "application/json"},
-  "requestContext": {"http": {"method": "POST", "path": "/predict", "protocol": "HTTP/1.1", "sourceIp": "127.0.0.1"}},
-  "body": "[{\"id_cliente\": 7055704, \"principal\": 10000, \"tipo_interes\": 4.5, \"num_cuotas\": 36, \"finalidad\": \"car\", \"vivienda\": \"RENT\"}]",
+  "headers": {
+    "host": "localhost",
+    "content-type": "application/json"
+  },
+  "requestContext": {
+    "http": {
+      "method": "POST",
+      "path": "/predict",
+      "protocol": "HTTP/1.1",
+      "sourceIp": "127.0.0.1"
+    }
+  },
+  "body": "[{\"id_cliente\": 60296256, \"principal\": 35000.0, \"num_cuotas\": 36, \"finalidad\": \"debt_consolidation\", \"vivienda\": \"MORTGAGE\", \"sector_empleo\": \"direccion_gestion\", \"antigüedad_empleo\": \"2-9\", \"ingresos\": 400000.0, \"dti\": 14.94, \"fico\": 707.0, \"num_lineas_credito\": 18, \"saldo_revolving\": 108661.0, \"num_consultas_6meses\": 2, \"fecha_primer_credito\": \"1997-03-01\", \"num_hipotecas\": 5, \"porc_uso_revolving\": 73.0, \"porc_uso_tarjetas\": 93.0, \"porc_tarjetas_75p\": 85.7, \"fecha_concesion\": \"2015-09-01\"}]",
   "isBase64Encoded": false
 }
