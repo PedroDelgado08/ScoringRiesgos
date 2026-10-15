@@ -1,8 +1,22 @@
-fastapi==0.135.1
-pydantic==2.12.5
-pandas==2.3.3
-numpy==2.3.5
-scikit-learn==1.8.0
-cloudpickle==3.1.2
-mangum==0.19.0
-awslambdaric==4.1.0
+# =====================================================================
+# Librerías que se instalan DENTRO de la imagen Docker de la Lambda
+# =====================================================================
+# Las versiones son exactamente las del entorno scoring-aws (Python 3.11),
+# con el que se entrenaron y guardaron los modelos. Si no coinciden, los
+# .pkl pueden no abrirse o dar predicciones distintas.
+
+# --- API web ----------------------------------------------------------
+fastapi==0.135.1          # framework de la API (rutas, validación, documentación)
+starlette==1.7.0          # base sobre la que está construido FastAPI
+pydantic==2.12.5          # validación de los datos de entrada y salida (schemas.py)
+mangum==0.19.0            # adaptador: traduce los eventos de Lambda a peticiones HTTP para FastAPI
+
+# --- Modelos ------------------------------------------------------------
+scikit-learn==1.9.1       # misma versión con la que se guardaron los modelos
+pandas==3.0.6             # misma versión con la que se guardaron los modelos
+numpy==2.4.6
+scipy==1.17.1             # la usa scikit-learn por dentro
+cloudpickle==3.1.2        # para abrir los .pkl (guardados con cloudpickle)
+
+# --- Lambda -------------------------------------------------------------
+awslambdaric==4.1.0       # "cliente de ejecución" de Lambda: recibe los eventos y llama a app.main.handler
