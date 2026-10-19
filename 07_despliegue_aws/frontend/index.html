@@ -1,346 +1,609 @@
 <!DOCTYPE html>
 <!-- =====================================================================
-     index.html · Credit Risk Scoring demo
+     index.html · Demo de Scoring de Riesgos (DRMdata)
      ---------------------------------------------------------------------
-     STRUCTURE of the page: which elements exist and in what order.
-       · The LOOK is in styles.css
-       · The BEHAVIOR (calling the API, painting results) is in app.js
-       · The TEXTS in both languages are in i18n.js
+     ESTRUCTURA de la página: qué elementos hay y en qué orden.
+       · El ASPECTO está en styles.css (mismo estilo que drm-data.com)
+       · El SIMULADOR (llamar a la API, pintar resultados) está en app.js
+       · La CARTERA (cuadro de mando con ECharts) está en cartera.js
+       · Los TEXTOS en español e inglés están en i18n.js
 
-     SECTION MAP (styles.css and app.js use the same numbering)
-       0. <head>       Metadata and links to CSS and JS (not visible)
-       1. Header       Title + API status + language selector
-       2. Form         Loan data sent to /predict
-       3. Results      Expected loss and PD, EAD, LGD parameters
-       4. Methodology  Short explanation of the calculation
-       5. Footer       Demo notice
+     MAPA (styles.css y app.js usan la misma numeración)
+       0. <head>       Metadatos, tipografías, CSS y JS (no se ve)
+       1. Cabecera     Marca drm/data + pestañas + estado de la API, idioma y tema
+       P. Portada      Título y tres cifras de la validación
+       2-3. Simulador  Formulario (POST /predict) y resultado
+       4. Cartera      Filtros, indicadores y gráficos de cartera.json
+       5. Metodología y pie
 
-     [i18n] TRANSLATION
-       data-i18n="key"       → i18n.js changes the element's TEXT
-       data-i18n-html="key"  → same, for formatted texts (<b>…</b>)
-       The Spanish text is written here: if the JavaScript failed, the
-       page would still display correctly in Spanish.
+     [i18n] TRADUCCIÓN
+       data-i18n="clave"       → i18n.js cambia el TEXTO del elemento
+       data-i18n-html="clave"  → igual, para textos con formato (<b>…</b>)
+       El texto en español se escribe aquí: si el JavaScript fallara,
+       la página se seguiría viendo bien en español.
      ===================================================================== -->
 <html lang="es">
 
 <!-- =====================================================================
-     0. HEAD · Information for the browser; none of this is visible
+     0. HEAD · Información para el navegador; nada de esto se ve
      ===================================================================== -->
 <head>
-  <!-- UTF-8 encoding: without it «ñ», «ü» or «€» may show up broken -->
+  <!-- Codificación UTF-8: sin ella «ñ», «ü» o «€» pueden salir rotos -->
   <meta charset="utf-8">
 
-  <!-- Fit the width to the device; without it, on mobile the page
-       would look like a miniature desktop -->
+  <!-- Ajusta el ancho al del dispositivo; sin esto, en el móvil
+       se vería una versión en miniatura del escritorio -->
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Browser tab text [i18n] -->
+  <!-- Texto de la pestaña del navegador [i18n] -->
   <title data-i18n="meta.titulo">Scoring de Riesgos · DRMdata</title>
-  
-  <!-- Tab icon. Once declared, the browser stops requesting
-       /favicon.ico (which does not exist, and the private bucket answers 403) -->
+
+  <!-- Descripción para buscadores y al compartir el enlace -->
+  <meta name="description" content="Demo de scoring de crédito: probabilidad de impago, exposición y severidad con tres modelos de machine learning desplegados en AWS Lambda.">
+
+  <!-- Icono de la pestaña. Al declararlo, el navegador deja de pedir
+       /favicon.ico (que no existe y el bucket privado contestaría con 403) -->
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 
-  <!-- Stylesheet -->
+  <!-- Tipografías de Google Fonts, las mismas que drm-data.com:
+       Bricolage Grotesque (títulos), IBM Plex Sans (texto), IBM Plex Mono (cifras).
+       preconnect: abre la conexión con Google antes de pedir los archivos (carga más rápida) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Hoja de estilos -->
   <link rel="stylesheet" href="styles.css">
 
-  <!-- LOAD ORDER (it matters):
-       1. config.js → API URL
-       2. i18n.js   → dictionary and t() function that app.js will use
-       3. app.js    → page logic
-       defer = "download it now, but run it when the HTML is
-       complete". Scripts with defer run in the order in which they
-       appear, so i18n.js always runs before app.js. -->
+  <!-- TEMA antes de pintar: si el visitante eligió oscuro la última vez, se
+       aplica YA, antes de que se vea la página. Si se hiciera en app.js
+       (que se ejecuta al final), la página parpadearía en claro un instante.
+       try/catch: en modo privado localStorage puede fallar; entonces, claro. -->
+  <script>
+    try {
+      if (localStorage.getItem("drm-theme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch (e) { /* sin almacenamiento: tema claro */ }
+  </script>
+
+  <!-- ORDEN DE CARGA (importa):
+       1. config.js  → URL de la API
+       2. i18n.js    → diccionario y función t() que usan app.js y cartera.js
+       3. app.js     → simulador, pestañas, tema y arranque de la página
+       4. cartera.js → cuadro de mando
+       defer = "descárgalo ya, pero ejecútalo cuando el HTML esté
+       completo". Los scripts con defer se ejecutan en el orden en que
+       aparecen, así que i18n.js siempre va antes que app.js.
+       ECharts (librería de gráficos) NO se carga aquí: cartera.js la pide
+       al CDN solo cuando se abre la pestaña Cartera. Así quien solo usa
+       el simulador no descarga ~1 MB, y su descarga no retrasa app.js
+       (con defer, app.js esperaría a que ECharts terminara de llegar). -->
   <script src="config.js"></script>
   <script src="i18n.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="cartera.js" defer></script>
 </head>
 
 <body>
+  <!-- Enlace oculto para saltar al contenido con el teclado (accesibilidad) -->
+  <a class="skip" href="#main" data-i18n="skip">Saltar al contenido</a>
 
   <!-- ===================================================================
-       1. HEADER
+       1. CABECERA (fija arriba al hacer scroll)
        =================================================================== -->
-  <header class="cabecera">
-    <!-- .contenedor: limits the width and centers the content (see CSS) -->
-    <div class="contenedor cabecera-interior">
+  <header class="nav">
+    <div class="wrap nav__inner">
 
-      <!-- 1.1 Brand + title and subtitle
-           Usual "product within a brand" structure:
-           [DRMdata logo] | Scoring de Riesgos
-           The brand is a link to the main DRMdata website. -->
-      <div class="cabecera-marca">
-
-        <!-- 1.1.a DRMdata brand
-             ⚠ SET the href to your website's real address (Route 53 domain).
-             The icon is an "inline" SVG (written inside the HTML): this way the
-             CSS can change its colors in light/dark mode, which cannot
-             be done with an <img>.
-             aria-hidden="true": the icon is decorative; the text already says "DRMdata". -->
-        <a class="marca" href="https://drm-data.com" title="DRMdata">
-          <svg class="marca-logo" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="8"/>             <!-- rounded background square -->
-            <path d="M9 22v-4 M14 22v-8 M19 22v-6 M24 22V10"/> <!-- four data bars -->
-          </svg>
-          <span class="marca-texto"><b>DRM</b><span>data</span></span>
+      <!-- 1.1 Marca: el logotipo drm/data lleva a la web principal,
+           seguido del nombre del producto (estructura "producto dentro de una marca").
+           aria-hidden en las piezas del logotipo: el lector de pantalla
+           lee solo el aria-label del enlace ("DRMdata") -->
+      <div class="nav__brand">
+        <a class="brand" href="https://drm-data.com" aria-label="DRMdata">
+          <span class="brand__mark" aria-hidden="true">drm</span><span class="brand__slash" aria-hidden="true">/</span><span class="brand__word" aria-hidden="true">data</span>
         </a>
-
-        <!-- Vertical line between the brand and the product name -->
-        <span class="cabecera-separador" aria-hidden="true"></span>
-
-        <!-- 1.1.b Product title and subtitle -->
-        <div>
-          <h1 class="titulo" data-i18n="cab.titulo">Scoring de Riesgos</h1>
-          <p class="subtitulo" data-i18n="cab.subtitulo">Pérdida esperada de un préstamo con tres modelos de machine learning</p>
-        </div>
-
+        <span class="nav__product" data-i18n="cab.producto">Scoring de Riesgos</span>
       </div>
 
-      <!-- Right-hand group of the header: status + languages -->
-      <div class="cabecera-acciones">
+      <!-- 1.2 Pestañas. role="tablist"/"tab": los lectores de pantalla las
+           anuncian como pestañas. aria-controls = id del panel que muestran.
+           app.js cambia aria-selected y el atributo hidden de los paneles. -->
+      <nav class="tabs" role="tablist" aria-label="Secciones">
+        <button class="tab" type="button" role="tab" id="tab-simulador" aria-controls="panel-simulador" aria-selected="true" data-i18n="tab.simulador">Simulador</button>
+        <button class="tab" type="button" role="tab" id="tab-cartera" aria-controls="panel-cartera" aria-selected="false" data-i18n="tab.cartera">Cartera</button>
+      </nav>
 
-        <!-- 1.2 API status indicator
-             app.js changes its class (cargando / ok / error), which the CSS
-             paints amber, green or red, and also its text. This is where the
-             cold start shows: "Iniciando el modelo…" → "Modelo listo".
-             role="status": screen readers announce the change.
-             No data-i18n: app.js sets the text in the active language. -->
+      <!-- 1.3 Acciones -->
+      <div class="nav__actions">
+        <!-- 1.3.a Estado de la API. app.js cambia su clase (cargando / ok / error),
+             que el CSS pinta en ámbar, verde o rojo, y su texto. Aquí se ve
+             el arranque en frío: "Iniciando el modelo…" → "Modelo listo".
+             role="status": los lectores de pantalla anuncian el cambio. -->
         <div class="estado cargando" id="estado" role="status">
-          <span class="estado-punto"></span>
-          <span id="estado-texto">Iniciando el modelo…</span>
+          <span class="estado__punto"></span>
+          <span class="estado__texto" id="estado-texto">Iniciando el modelo…</span>
         </div>
 
-        <!-- 1.3 Language selector [i18n]
-             type="button": does NOT submit forms, it only runs its action.
-             data-idioma: the language each button activates (read by i18n.js).
-             aria-pressed: indicates which one is active (i18n.js updates it;
-             the CSS uses it to highlight the active button).
-             title: text on mouse hover, always in its own language
-             (convention: a language's name is written in that language).
-             alt="" on the images: they are decorative, the ES/EN text already
-             explains the button. width/height: provisional size until
-             the CSS is loaded. -->
-        <div class="idiomas" role="group" aria-label="Idioma / Language">
-          <button type="button" class="idioma" data-idioma="es" aria-pressed="true" title="Castellano">
-            <img src="assets/bandera-es.svg" alt="" width="24" height="16"><span>ES</span>
-          </button>
-          <button type="button" class="idioma" data-idioma="en" aria-pressed="false" title="English">
-            <img src="assets/bandera-gb.svg" alt="" width="24" height="16"><span>EN</span>
-          </button>
-        </div>
+        <!-- 1.3.b Idioma: muestra el idioma al que se cambiará (EN o ES), como en drm-data.com.
+             type="button": no envía formularios, solo ejecuta su acción. -->
+        <button class="icon-btn lang-btn" id="boton-idioma" type="button" aria-label="Switch to English">EN</button>
 
+        <!-- 1.3.c Tema claro / oscuro (icono de luna) -->
+        <button class="icon-btn" id="boton-tema" type="button" data-i18n-aria="aria.tema" aria-label="Cambiar a tema oscuro">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+        </button>
       </div>
     </div>
   </header>
 
-  <!-- <main>: the main content. .rejilla splits it into two columns
-       (form | results) on wide screens, and into a single
-       column on mobile (see CSS). -->
-  <main class="contenedor rejilla">
+  <main id="main">
 
     <!-- =================================================================
-         2. FORM · Data sent to POST /predict
-         Each field maps to a field of RegistroEntrada (schemas.py)
-         =================================================================
-         <label for="X"> is bound to the field with id="X": clicking
-         the text activates the field, and screen readers know
-         what each thing is. -->
-    <form class="tarjeta" id="formulario">
-      <h2 class="tarjeta-titulo" data-i18n="form.titulo">Datos de la operación</h2>
-
-      <!-- 2.1 Client → id_cliente
-           The options are NOT written here: app.js fills them with the
-           response of GET /clientes. This option is only provisional. -->
-      <div class="campo">
-        <label for="id_cliente" data-i18n="form.cliente">Cliente</label>
-        <select id="id_cliente">
-          <option value="" data-i18n="form.cargandoClientes">Cargando clientes…</option>
-        </select>
-      </div>
-
-      <!-- 2.2 Client profile (read only, data from clientes.csv)
-           <dl> = description list: term (<dt>) / value (<dd>) pairs.
-           hidden = hidden until app.js has a client to show.
-           The terms are translated; the values (<dd>) are set by app.js. -->
-      <dl class="perfil" id="perfil" hidden>
-        <div><dt data-i18n="perfil.rating">Rating</dt>                 <dd id="perfil-rating">–</dd></div>
-        <div><dt data-i18n="perfil.ingresos">Ingresos anuales</dt>     <dd id="perfil-ingresos">–</dd></div>
-        <div><dt data-i18n="perfil.dti">DTI</dt>                       <dd id="perfil-dti">–</dd></div>
-        <div><dt data-i18n="perfil.antiguedad">Antigüedad laboral</dt> <dd id="perfil-antiguedad">–</dd></div>
-      </dl>
-
-      <!-- 2.3 Amount → principal
-           type="range" = slider. min/max/step limit the values, so
-           the user cannot send something the API would reject (gt=0).
-           <output> shows the chosen value; it is updated by app.js, which
-           also applies the language's number format (20.000 € / €20,000). -->
-      <div class="campo">
-        <div class="campo-cabecera">
-          <label for="principal" data-i18n="form.importe">Importe solicitado</label>
-          <output id="principal-valor" for="principal">20.000 €</output>
-        </div>
-        <input type="range" id="principal" min="1000" max="40000" step="500" value="20000">
-        <div class="campo-leyenda"><span>1.000 €</span><span>40.000 €</span></div>
-      </div>
-
-      <!-- 2.4 Interest rate → tipo_interes
-           Minimum 5 %, never 0: the French amortization formula in
-           scoring.py divides by zero with 0 interest. -->
-      <div class="campo">
-        <div class="campo-cabecera">
-          <label for="tipo_interes" data-i18n="form.tipo">Tipo de interés anual</label>
-          <output id="tipo-valor" for="tipo_interes">12,0 %</output>
-        </div>
-        <input type="range" id="tipo_interes" min="5" max="30" step="0.1" value="12">
-        <div class="campo-leyenda"><span>5 %</span><span>30 %</span></div>
-      </div>
-
-      <!-- 2.5 Term → num_cuotas
-           Only 36 or 60: the model treats the term as a category
-           (" 36 months") and only those two existed in training.
-           Radios with the same name = only one can be checked.
-           <fieldset> + <legend> group options under a title.
-           The text goes in its own <span>: if the whole <label> were
-           translated, the <input> inside it would be erased. -->
-      <fieldset class="campo">
-        <legend data-i18n="form.plazo">Plazo</legend>
-        <div class="segmentado">
-          <label><input type="radio" name="num_cuotas" value="36" checked><span data-i18n="form.meses36">36 meses</span></label>
-          <label><input type="radio" name="num_cuotas" value="60"><span data-i18n="form.meses60">60 meses</span></label>
-        </div>
-      </fieldset>
-
-      <!-- 2.6 Purpose and housing → finalidad, vivienda
-           value = the EXACT category the model was trained with (in
-           English) and it is NEVER translated: it is what gets sent to the API.
-           Only the visible text of each option is translated. -->
-      <div class="campo-fila">
-        <div class="campo">
-          <label for="finalidad" data-i18n="form.finalidad">Finalidad</label>
-          <select id="finalidad">
-            <option value="debt_consolidation" data-i18n="fin.debt_consolidation">Reunificación de deudas</option>
-            <option value="credit_card"        data-i18n="fin.credit_card">Tarjeta de crédito</option>
-            <option value="home_improvement"   data-i18n="fin.home_improvement">Reformas del hogar</option>
-            <option value="major_purchase"     data-i18n="fin.major_purchase">Compra importante</option>
-            <option value="car"                data-i18n="fin.car">Vehículo</option>
-            <option value="small_business"     data-i18n="fin.small_business">Pequeño negocio</option>
-            <option value="medical"            data-i18n="fin.medical">Gastos médicos</option>
-            <option value="moving"             data-i18n="fin.moving">Mudanza</option>
-            <option value="house"              data-i18n="fin.house">Compra de vivienda</option>
-            <option value="vacation"           data-i18n="fin.vacation">Viajes</option>
-            <option value="other"              data-i18n="fin.other">Otros</option>
-          </select>
-        </div>
-        <div class="campo">
-          <label for="vivienda" data-i18n="form.vivienda">Vivienda</label>
-          <select id="vivienda">
-            <option value="RENT"     data-i18n="viv.RENT">En alquiler</option>
-            <option value="MORTGAGE" data-i18n="viv.MORTGAGE">Con hipoteca</option>
-            <option value="OWN"      data-i18n="viv.OWN">En propiedad</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- 2.7 Estimated monthly installment
-           Computed by app.js in the browser (same formula as scoring.py),
-           without calling the API: it updates when any control moves.
-           The fixed text goes in its own <span> for the same reason as in 2.5. -->
-      <p class="cuota">
-        <span data-i18n="form.cuota">Cuota mensual estimada</span>
-        <strong id="cuota">–</strong>
-      </p>
-
-      <!-- 2.8 Submit button
-           type="submit": when pressed, the form fires the
-           "submit" event, which app.js intercepts to call /predict.
-           disabled: disabled until the clients are loaded.
-           No data-i18n: app.js changes its text ("Evaluando…"). -->
-      <button type="submit" class="boton" id="boton" disabled>Evaluar operación</button>
-    </form>
-
-    <!-- =================================================================
-         3. RESULTS · Response of POST /predict (ScoringSalida)
-         Only one of 3.1 / 3.3 is visible at a time; app.js decides which
-         one with the hidden attribute. 3.2 appears only if something fails.
-         aria-live="polite": screen readers read the changes.
+         P. PORTADA CORTA
          ================================================================= -->
-    <section class="resultados" aria-live="polite">
+    <section class="hero">
+      <div class="wrap hero__grid">
+        <div class="hero__copy">
+          <p class="eyebrow" data-i18n="hero.eyebrow">Machine learning · AWS Lambda · Lending Club</p>
+          <h1 class="hero__title" data-i18n-html="hero.titulo">¿Cuánto se puede perder con un préstamo? <em>Tres modelos lo estiman al momento.</em></h1>
+          <p class="hero__lead" data-i18n="hero.entradilla">Elige un cliente real de la muestra de validación, cambia sus datos si quieres y compara la estimación del modelo con la nota que le puso Lending Club y con lo que pasó de verdad.</p>
+        </div>
 
-      <!-- 3.1 Empty state: what is shown before the first evaluation -->
-      <div class="tarjeta vacio" id="vacio">
-        <p data-i18n-html="res.vacio">Configura la operación y pulsa <b>Evaluar operación</b>.</p>
+        <!-- Tres cifras de la validación final (notebook 08). <dl>: pares
+             término (<dt>) / valor (<dd>); el CSS pone la cifra encima. -->
+        <dl class="metrics">
+          <div><dt data-i18n="hero.m1">AUC del modelo (LC: 0,670)</dt><dd data-i18n="hero.v1">0,678</dd></div>
+          <div><dt data-i18n="hero.m2">Error de la pérdida esperada</dt><dd data-i18n="hero.v2">1,5 %</dd></div>
+          <div><dt data-i18n="hero.m3">Préstamos de validación</dt><dd data-i18n="hero.v3">20.000</dd></div>
+        </dl>
       </div>
+    </section>
 
-      <!-- 3.2 Error message (API down, 404, 422…); written by app.js -->
-      <div class="aviso-error" id="error" role="alert" hidden></div>
+    <!-- =================================================================
+         SIMULADOR (pestaña 1) · role="tabpanel", ligado a su pestaña
+         ================================================================= -->
+    <section class="section" id="panel-simulador" role="tabpanel" aria-labelledby="tab-simulador">
+      <div class="wrap sim">
 
-      <!-- 3.3 Result -->
-      <div id="resultado" hidden>
+        <!-- ===============================================================
+             2. FORMULARIO · Datos que se envían a POST /predict
+             Cada campo corresponde a uno de SolicitudEntrada (schemas.py);
+             el id de cada control es el nombre del campo en la API.
+             <label for="X"> va unido al control con id="X": pulsar el texto
+             activa el campo y los lectores de pantalla saben qué es.
+             =============================================================== -->
+        <!-- novalidate: el navegador no valida solo al enviar; app.js llama a
+             reportValidity() y muestra los avisos nativos de los campos con required,
+             min o max que no se cumplen, ANTES de llamar a la API -->
+        <form class="panel sim__form" id="formulario" novalidate>
 
-        <!-- 3.3.1 Expected loss: the main figure
-             In euros = perdida_esperada × amount; in % = perdida_esperada -->
-        <div class="tarjeta destacado">
-          <p class="destacado-etiqueta" data-i18n="res.pe">Pérdida esperada</p>
-          <p class="destacado-valor" id="pe-euros">–</p>
-          <p class="destacado-pie" id="pe-porcentaje">–</p>
+          <!-- 2.1 CLIENTE DE LA MUESTRA -->
+          <fieldset class="bloque">
+            <legend class="bloque__titulo" data-i18n="form.bloqueCliente">Cliente de la muestra</legend>
+
+            <!-- Filtro por nota LC. app.js crea un chip por nota (Todas, A … G)
+                 y deja en el desplegable solo los clientes de esa nota -->
+            <div class="chips" id="filtro-notas" role="group" aria-label="Nota Lending Club"></div>
+
+            <div class="cliente">
+              <!-- Desplegable de clientes: app.js lo rellena con GET /clientes -->
+              <label class="field" for="id_cliente">
+                <span data-i18n="form.cliente">Cliente</span>
+                <select id="id_cliente">
+                  <option value="" data-i18n="form.cargandoClientes">Cargando clientes…</option>
+                </select>
+              </label>
+              <!-- Botones bajo el desplegable -->
+              <div class="cliente__botones">
+                <!-- Elige un cliente al azar (de la nota filtrada) -->
+                <button class="btn btn--ghost btn--sm" type="button" id="boton-azar" data-i18n="form.azar">Al azar</button>
+                <!-- Devuelve el formulario a los datos originales del cliente -->
+                <button class="btn btn--ghost btn--sm" type="button" id="boton-restablecer" data-i18n="form.restablecer">Restablecer</button>
+                <!-- Cliente nuevo: formulario con valores típicos, sin id_cliente y
+                     con la fecha de hoy como concesión. La API ya lo admite; solo
+                     que no hay nota de LC con la que comparar -->
+                <button class="btn btn--ghost btn--sm" type="button" id="boton-nuevo" data-i18n="form.nuevo">Cliente nuevo</button>
+              </div>
+            </div>
+
+            <!-- Ficha: lo que hizo Lending Club con el cliente (app.js pone los valores) -->
+            <dl class="ficha" id="ficha" hidden>
+              <div><dt data-i18n="ficha.nota">Nota LC</dt><dd id="ficha-nota">–</dd></div>
+              <div><dt data-i18n="ficha.interes">Interés LC</dt><dd id="ficha-interes">–</dd></div>
+              <div><dt data-i18n="ficha.concesion">Concedido</dt><dd id="ficha-concesion">–</dd></div>
+              <!-- Aparece cuando se cambia algún dato del cliente -->
+              <div class="editado" id="aviso-editado" hidden data-i18n="ficha.editado">● datos modificados</div>
+            </dl>
+          </fieldset>
+
+          <!-- 2.2 PRÉSTAMO -->
+          <fieldset class="bloque">
+            <legend class="bloque__titulo" data-i18n="form.bloquePrestamo">Préstamo</legend>
+
+            <!-- Importe → principal. type="range" = deslizador; min/max/step
+                 limitan los valores a lo que acepta la API (0 < principal ≤ 40.000).
+                 step 25: Lending Club prestaba en múltiplos de 25 $ -->
+            <div class="field">
+              <div class="field__head">
+                <label for="principal" data-i18n="form.importe">Importe</label>
+                <output id="principal-valor" for="principal">–</output>
+              </div>
+              <input type="range" id="principal" min="1000" max="40000" step="25" value="15000">
+              <div class="field__legend"><span id="principal-min">1.000 $</span><span id="principal-max">40.000 $</span></div>
+            </div>
+
+            <div class="campos">
+              <!-- Plazo → num_cuotas. Solo 36 o 60: los dos que existían en LC.
+                   Radios con el mismo name = solo uno puede estar marcado.
+                   El texto va en su propio <span> para poder traducirlo sin
+                   borrar el <input> que hay dentro del <label>. -->
+              <div class="field">
+                <span id="plazo-etiqueta" data-i18n="form.plazo">Plazo</span>
+                <div class="segmentado" role="radiogroup" aria-labelledby="plazo-etiqueta">
+                  <label><input type="radio" name="num_cuotas" value="36" checked><span data-i18n="form.meses36">36 meses</span></label>
+                  <label><input type="radio" name="num_cuotas" value="60"><span data-i18n="form.meses60">60 meses</span></label>
+                </div>
+              </div>
+
+              <!-- Finalidad → finalidad. value = categoría EXACTA con la que se
+                   entrenó el modelo (en inglés) y NUNCA se traduce: es lo que se
+                   envía a la API. Solo se traduce el texto visible. -->
+              <label class="field" for="finalidad">
+                <span data-i18n="form.finalidad">Finalidad</span>
+                <select id="finalidad">
+                  <option value="debt_consolidation" data-i18n="fin.debt_consolidation">Reunificación de deudas</option>
+                  <option value="credit_card"        data-i18n="fin.credit_card">Tarjeta de crédito</option>
+                  <option value="home_improvement"   data-i18n="fin.home_improvement">Reformas del hogar</option>
+                  <option value="major_purchase"     data-i18n="fin.major_purchase">Compra importante</option>
+                  <option value="car"                data-i18n="fin.car">Vehículo</option>
+                  <option value="small_business"     data-i18n="fin.small_business">Pequeño negocio</option>
+                  <option value="medical"            data-i18n="fin.medical">Gastos médicos</option>
+                  <option value="moving"             data-i18n="fin.moving">Mudanza</option>
+                  <option value="house"              data-i18n="fin.house">Compra de vivienda</option>
+                  <option value="vacation"           data-i18n="fin.vacation">Viajes</option>
+                  <option value="other"              data-i18n="fin.other">Otros</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- 2.3 PERFIL PERSONAL Y LABORAL -->
+          <fieldset class="bloque">
+            <legend class="bloque__titulo" data-i18n="form.bloquePerfil">Perfil</legend>
+            <div class="campos">
+              <!-- Vivienda → vivienda -->
+              <label class="field" for="vivienda">
+                <span data-i18n="form.vivienda">Vivienda</span>
+                <select id="vivienda">
+                  <option value="RENT"     data-i18n="viv.RENT">En alquiler</option>
+                  <option value="MORTGAGE" data-i18n="viv.MORTGAGE">Con hipoteca</option>
+                  <option value="OWN"      data-i18n="viv.OWN">En propiedad</option>
+                </select>
+              </label>
+
+              <!-- Sector de empleo → sector_empleo (lista SECTORES de preparacion.py) -->
+              <label class="field" for="sector_empleo">
+                <span data-i18n="form.sector">Sector de empleo</span>
+                <select id="sector_empleo">
+                  <option value="salud"                data-i18n="sec.salud">Salud</option>
+                  <option value="educacion"            data-i18n="sec.educacion">Educación</option>
+                  <option value="legal"                data-i18n="sec.legal">Legal</option>
+                  <option value="seguridad_publica"    data-i18n="sec.seguridad_publica">Seguridad pública</option>
+                  <option value="transporte"           data-i18n="sec.transporte">Transporte</option>
+                  <option value="hosteleria"           data-i18n="sec.hosteleria">Hostelería</option>
+                  <option value="finanzas"             data-i18n="sec.finanzas">Finanzas</option>
+                  <option value="tecnologia"           data-i18n="sec.tecnologia">Tecnología</option>
+                  <option value="comercio"             data-i18n="sec.comercio">Comercio</option>
+                  <option value="oficios_industria"    data-i18n="sec.oficios_industria">Oficios e industria</option>
+                  <option value="autonomo_propietario" data-i18n="sec.autonomo_propietario">Autónomo o propietario</option>
+                  <option value="administrativo"       data-i18n="sec.administrativo">Administrativo</option>
+                  <option value="direccion_gestion"    data-i18n="sec.direccion_gestion">Dirección y gestión</option>
+                  <option value="otros"                data-i18n="sec.otros">Otros</option>
+                  <option value="sin_empleo_declarado" data-i18n="sec.sin_empleo_declarado">Sin empleo declarado</option>
+                </select>
+              </label>
+
+              <!-- Antigüedad en el empleo → antigüedad_empleo (4 grupos del notebook 03).
+                   El id lleva «ü» porque es el nombre del campo en la API -->
+              <label class="field" for="antigüedad_empleo">
+                <span data-i18n="form.antiguedad">Antigüedad en el empleo</span>
+                <select id="antigüedad_empleo">
+                  <option value="≤1"                   data-i18n="ant.hasta1">1 año o menos</option>
+                  <option value="2-9"                  data-i18n="ant.2a9">De 2 a 9 años</option>
+                  <option value="10+"                  data-i18n="ant.10mas">10 años o más</option>
+                  <option value="sin_empleo_declarado" data-i18n="ant.sin">Sin empleo declarado</option>
+                </select>
+              </label>
+
+              <!-- Ingresos anuales → ingresos. type="number": en el móvil abre
+                   el teclado numérico. min/max/step = los límites de la API -->
+              <label class="field" for="ingresos">
+                <span data-i18n="form.ingresos">Ingresos anuales ($)</span>
+                <input type="number" id="ingresos" required min="1" max="10000000" step="1" inputmode="numeric">
+              </label>
+
+              <!-- DTI → dti: deudas mensuales / ingresos mensuales, en % -->
+              <label class="field campo--ancho" for="dti">
+                <span data-i18n="form.dti">DTI: deudas / ingresos (%)</span>
+                <input type="number" id="dti" required min="0" max="100" step="0.01" inputmode="decimal">
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- 2.4 HISTORIAL DE CRÉDITO -->
+          <fieldset class="bloque">
+            <legend class="bloque__titulo" data-i18n="form.bloqueHistorial">Historial de crédito</legend>
+            <div class="campos">
+              <!-- FICO → fico (puntuación de crédito de EE. UU., 300–850) -->
+              <label class="field" for="fico">
+                <span data-i18n="form.fico">Puntuación FICO</span>
+                <input type="number" id="fico" required min="300" max="850" step="1" inputmode="numeric">
+              </label>
+
+              <!-- Fecha del primer crédito → fecha_primer_credito. El modelo usa
+                   los años de historial = fecha de concesión − esta fecha -->
+              <label class="field" for="fecha_primer_credito">
+                <span data-i18n="form.primerCredito">Primer crédito</span>
+                <input type="date" id="fecha_primer_credito" required>
+              </label>
+
+              <!-- Líneas de crédito abiertas → num_lineas_credito -->
+              <label class="field" for="num_lineas_credito">
+                <span data-i18n="form.lineas">Líneas de crédito abiertas</span>
+                <input type="number" id="num_lineas_credito" required min="0" max="100" step="1" inputmode="numeric">
+              </label>
+
+              <!-- Consultas en los últimos 6 meses → num_consultas_6meses -->
+              <label class="field" for="num_consultas_6meses">
+                <span data-i18n="form.consultas">Consultas en 6 meses</span>
+                <input type="number" id="num_consultas_6meses" required min="0" max="50" step="1" inputmode="numeric">
+              </label>
+
+              <!-- Saldo revolving → saldo_revolving (deuda pendiente en tarjetas y similares) -->
+              <label class="field campo--ancho" for="saldo_revolving">
+                <span data-i18n="form.revolving">Saldo revolving ($)</span>
+                <input type="number" id="saldo_revolving" required min="0" step="1" inputmode="numeric">
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- 2.5 DATOS OPCIONALES, plegados con <details> (se abre al pulsar).
+               Si se dejan vacíos, el pipeline los imputa como en el entrenamiento -->
+          <details class="bloque opcionales">
+            <summary data-i18n="form.opcionales">Más datos (opcionales)</summary>
+            <div class="campos">
+              <label class="field" for="num_hipotecas">
+                <span data-i18n="form.hipotecas">Nº de hipotecas</span>
+                <input type="number" id="num_hipotecas" min="0" max="50" step="1" inputmode="numeric">
+              </label>
+              <label class="field" for="porc_uso_revolving">
+                <span data-i18n="form.usoRevolving">Uso del revolving (%)</span>
+                <input type="number" id="porc_uso_revolving" min="0" max="200" step="0.1" inputmode="decimal">
+              </label>
+              <label class="field" for="porc_uso_tarjetas">
+                <span data-i18n="form.usoTarjetas">Uso de las tarjetas (%)</span>
+                <input type="number" id="porc_uso_tarjetas" min="0" max="400" step="0.1" inputmode="decimal">
+              </label>
+              <label class="field" for="porc_tarjetas_75p">
+                <span data-i18n="form.tarjetas75">Tarjetas con uso &gt; 75 % (%)</span>
+                <input type="number" id="porc_tarjetas_75p" min="0" max="100" step="0.1" inputmode="decimal">
+              </label>
+            </div>
+            <p class="note" data-i18n="form.opcionalesNota">Si los dejas vacíos, el modelo los rellena igual que hizo en el entrenamiento.</p>
+          </details>
+
+          <!-- 2.6 Botón de enviar. type="submit": al pulsarlo, el formulario lanza
+               el evento "submit", que app.js intercepta para llamar a /predict.
+               disabled hasta que se cargan los clientes. Sin data-i18n:
+               app.js cambia su texto ("Calculando…"). -->
+          <button class="btn btn--primary" type="submit" id="boton-evaluar" disabled>Calcular riesgo</button>
+        </form>
+
+        <!-- ===============================================================
+             3. RESULTADO · Respuesta de POST /predict (ScoringSalida)
+             Solo uno de 3.1 / 3.3 se ve a la vez; app.js decide con hidden.
+             3.2 solo aparece si algo falla.
+             aria-live="polite": los lectores de pantalla leen los cambios.
+             =============================================================== -->
+        <section class="sim__result" aria-live="polite">
+
+          <!-- 3.1 Estado vacío -->
+          <div class="panel vacio" id="vacio">
+            <p data-i18n-html="res.vacio">Elige un cliente y pulsa <b>Calcular riesgo</b>.</p>
+          </div>
+
+          <!-- 3.2 Error (API caída, 422…); lo escribe app.js -->
+          <div class="aviso-error" id="error" role="alert" hidden></div>
+
+          <!-- 3.3 Resultado -->
+          <div id="resultado" class="sim__result" hidden>
+
+            <!-- 3.3.1 Pérdida esperada (cifra principal) + PD, EAD, LGD -->
+            <div class="panel">
+              <div class="calc">
+                <p class="calc__k" data-i18n="res.pe">Pérdida esperada</p>
+                <p class="calc__big" id="pe-importe">–</p>
+                <p class="calc__line" id="pe-porcentaje">–</p>
+              </div>
+
+              <!-- Los tres parámetros tienen la MISMA estructura (texto + barra);
+                   app.js pone el valor y el ancho de la barra (0-100 %) -->
+              <div class="parametros">
+                <div class="parametro">
+                  <div class="parametro__cab">
+                    <span data-i18n-html="res.pd"><b>PD</b> · Probabilidad de impago</span>
+                    <span class="parametro__valor" id="pd-valor">–</span>
+                  </div>
+                  <div class="barra"><div class="barra__relleno" id="pd-barra"></div></div>
+                </div>
+                <div class="parametro">
+                  <div class="parametro__cab">
+                    <span data-i18n-html="res.ead"><b>EAD</b> · Exposición en el impago</span>
+                    <span class="parametro__valor" id="ead-valor">–</span>
+                  </div>
+                  <div class="barra"><div class="barra__relleno" id="ead-barra"></div></div>
+                </div>
+                <div class="parametro">
+                  <div class="parametro__cab">
+                    <span data-i18n-html="res.lgd"><b>LGD</b> · Severidad de la pérdida</span>
+                    <span class="parametro__valor" id="lgd-valor">–</span>
+                  </div>
+                  <div class="barra"><div class="barra__relleno" id="lgd-barra"></div></div>
+                  <!-- La LGD es fija: ningún modelo mejoraba a la media (notebook 07) -->
+                  <p class="note" data-i18n="res.lgdNota">Fija para todos los préstamos: la media histórica, porque ningún modelo la mejoraba.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3.3.2 Decil de riesgo: regla de 10 casillas (app.js crea y marca) -->
+            <div class="panel decil">
+              <div class="decil__cab">
+                <h3 data-i18n="res.decil">Decil de riesgo</h3>
+                <strong id="decil-valor">–</strong>
+              </div>
+              <div class="regla" id="regla" aria-hidden="true"></div>
+              <div class="regla__leyenda"><span data-i18n="res.decilMenos">Menos riesgo</span><span data-i18n="res.decilMas">Más riesgo</span></div>
+              <p class="note" data-i18n="res.decilNota">Posición de su PD entre los préstamos de validación: en cada decil hay un 10 % de ellos.</p>
+            </div>
+
+            <!-- 3.3.3 Comparación con Lending Club. Tabla: concepto | LC | modelo -->
+            <div class="panel lc" id="bloque-lc">
+              <h3 data-i18n="res.lcTitulo">Frente a Lending Club</h3>
+              <table class="comparacion">
+                <thead>
+                  <tr><th></th><th>Lending Club</th><th class="col-modelo" data-i18n="res.modelo">Modelo</th></tr>
+                </thead>
+                <tbody>
+                  <!-- Nota: la que puso LC frente a la subnota cuyo impago histórico
+                       se parece más a la PD del modelo (nota_equivalente_modelo) -->
+                  <tr><td data-i18n="res.lcNota">Nota</td><td id="lc-nota">–</td><td class="col-modelo" id="modelo-nota">–</td></tr>
+                  <!-- PD: impago histórico de esa nota (pd_implicita_lc) frente a la PD del modelo -->
+                  <tr><td data-i18n="res.lcPd">Probabilidad de impago</td><td id="lc-pd">–</td><td class="col-modelo" id="modelo-pd">–</td></tr>
+                  <!-- Tipo de interés: solo lo puso LC; el modelo no lo usa -->
+                  <tr><td data-i18n="res.lcInteres">Tipo de interés</td><td id="lc-interes">–</td><td class="col-modelo">–</td></tr>
+                </tbody>
+              </table>
+              <!-- Lo que pasó de verdad con el préstamo (impago_real) -->
+              <div class="real">
+                <span data-i18n="res.real">Resultado real del préstamo</span>
+                <span class="insignia" id="insignia-real">–</span>
+              </div>
+              <p class="note" id="nota-editado" hidden data-i18n="res.lcEditado">Has cambiado datos del cliente: la nota de LC y el resultado real son los del cliente original.</p>
+            </div>
+
+            <!-- 3.3.4 En lugar de 3.3.3 cuando es un cliente nuevo (sin nota de LC) -->
+            <div class="panel" id="bloque-nuevo" hidden>
+              <h3 data-i18n="res.nuevoTitulo">Cliente nuevo</h3>
+              <p class="calc__line" data-i18n="res.nuevoTexto">No tiene nota de Lending Club ni resultado real con los que comparar. Se ha puntuado con la fecha de hoy como fecha de concesión.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- =================================================================
+         4. CARTERA (pestaña 2) · Cuadro de mando con cartera.json
+         hidden hasta que se pulsa su pestaña; cartera.js descarga los datos
+         la primera vez que se abre (así no pesa a quien solo usa el simulador)
+         ================================================================= -->
+    <section class="section" id="panel-cartera" role="tabpanel" aria-labelledby="tab-cartera" hidden>
+      <div class="wrap cartera">
+
+        <!-- 4.1 Filtros: cartera.js rellena las opciones con los valores de los datos.
+             Se combinan entre sí; además, al hacer clic en una barra de los gráficos
+             por nota se filtra todo por esa nota (filtrado cruzado, como en Power BI).
+             data-filtro = nombre de la columna de cartera.json que filtra cada desplegable -->
+        <div class="panel">
+          <div class="filtros" id="filtros">
+            <label class="field"><span data-i18n="car.anio">Año</span><select data-filtro="año"></select></label>
+            <label class="field"><span data-i18n="car.plazo">Plazo</span><select data-filtro="plazo"></select></label>
+            <label class="field"><span data-i18n="car.nota">Nota LC</span><select data-filtro="nota"></select></label>
+            <label class="field"><span data-i18n="car.finalidad">Finalidad</span><select data-filtro="finalidad"></select></label>
+            <label class="field"><span data-i18n="car.vivienda">Vivienda</span><select data-filtro="vivienda"></select></label>
+            <label class="field"><span data-i18n="car.sector">Sector</span><select data-filtro="sector"></select></label>
+          </div>
+          <div class="filtros__pie">
+            <!-- "20.000 préstamos" o "3.412 de 20.000 préstamos con los filtros" (cartera.js) -->
+            <span id="cartera-recuento"></span>
+            <button class="link-btn" type="button" id="quitar-filtros" data-i18n="car.quitar">Quitar filtros</button>
+          </div>
         </div>
 
-        <!-- 3.3.2 Risk parameters: PD, EAD and LGD
-             The three blocks have the SAME structure (text + bar);
-             app.js fills in the value and sets the bar width (0-100 %). -->
-        <div class="tarjeta">
-          <h2 class="tarjeta-titulo" data-i18n="res.parametros">Parámetros de riesgo</h2>
+        <!-- Mensaje mientras se descarga cartera.json (o si falla) -->
+        <p class="cargando-datos" id="cartera-cargando" data-i18n="car.cargando">Cargando la cartera…</p>
 
-          <div class="parametro">
-            <div class="parametro-cabecera">
-              <span data-i18n-html="res.pd"><b>PD</b> · Probabilidad de impago</span>
-              <span id="pd-valor">–</span>
-            </div>
-            <div class="barra"><div class="barra-relleno" id="pd-barra"></div></div>
+        <div id="cartera-contenido" class="cartera" hidden>
+          <!-- 4.2 Indicadores: cartera.js escribe las cifras -->
+          <div class="kpis">
+            <div class="panel kpi"><span class="kpi__k" data-i18n="kpi.prestamos">Préstamos</span><span class="kpi__v" id="kpi-n">–</span><span class="kpi__sub" id="kpi-n-sub">–</span></div>
+            <div class="panel kpi"><span class="kpi__k" data-i18n="kpi.pd">PD media</span><span class="kpi__v" id="kpi-pd">–</span><span class="kpi__sub" id="kpi-pd-sub">–</span></div>
+            <div class="panel kpi"><span class="kpi__k" data-i18n="kpi.pe">Pérdida esperada</span><span class="kpi__v" id="kpi-pe">–</span><span class="kpi__sub" id="kpi-pe-sub">–</span></div>
+            <div class="panel kpi"><span class="kpi__k" data-i18n="kpi.auc">AUC del modelo</span><span class="kpi__v" id="kpi-auc">–</span><span class="kpi__sub" id="kpi-auc-sub">–</span></div>
           </div>
 
-          <div class="parametro">
-            <div class="parametro-cabecera">
-              <span data-i18n-html="res.ead"><b>EAD</b> · Exposición en el impago</span>
-              <span id="ead-valor">–</span>
-            </div>
-            <div class="barra"><div class="barra-relleno" id="ead-barra"></div></div>
-          </div>
-
-          <div class="parametro">
-            <div class="parametro-cabecera">
-              <span data-i18n-html="res.lgd"><b>LGD</b> · Severidad de la pérdida</span>
-              <span id="lgd-valor">–</span>
-            </div>
-            <div class="barra"><div class="barra-relleno" id="lgd-barra"></div></div>
+          <!-- 4.3 Gráficos: ECharts dibuja dentro de cada .grafico__lienzo -->
+          <div class="graficos">
+            <figure class="panel grafico">
+              <h3 data-i18n="g1.titulo">Curva ROC: modelo frente a la subnota de LC</h3>
+              <p data-i18n="g1.texto">¿Quién ordena mejor el riesgo con los filtros elegidos?</p>
+              <div class="grafico__lienzo" id="g-roc"></div>
+            </figure>
+            <figure class="panel grafico">
+              <h3 data-i18n="g2.titulo">Calibración por deciles de PD</h3>
+              <p data-i18n="g2.texto">Barras: PD media del modelo. Línea: impago real. Si coinciden, las probabilidades son creíbles.</p>
+              <div class="grafico__lienzo" id="g-calibracion"></div>
+            </figure>
+            <figure class="panel grafico">
+              <h3 data-i18n="g3.titulo">Por nota de LC: PD del modelo frente a impago real</h3>
+              <p data-i18n="g3.texto">Haz clic en una barra para filtrar todo por esa nota.</p>
+              <div class="grafico__lienzo" id="g-notas"></div>
+            </figure>
+            <figure class="panel grafico">
+              <h3 data-i18n="g4.titulo">Pérdida esperada frente a real, por nota</h3>
+              <p data-i18n="g4.texto">En % del importe prestado.</p>
+              <div class="grafico__lienzo" id="g-perdida"></div>
+            </figure>
+            <figure class="panel grafico">
+              <h3 data-i18n="g5.titulo">Nota de LC × decil del modelo</h3>
+              <p data-i18n="g5.texto">Color: % de impago real. Dónde discrepan el modelo y LC, y quién acierta. En blanco, las celdas con menos de 20 préstamos.</p>
+              <div class="grafico__lienzo" id="g-mapa"></div>
+            </figure>
+            <figure class="panel grafico">
+              <h3 data-i18n="g6.titulo">Distribución de la PD</h3>
+              <p data-i18n="g6.texto">Préstamos pagados frente a impagados: cuánto se solapan.</p>
+              <div class="grafico__lienzo" id="g-distribucion"></div>
+            </figure>
           </div>
         </div>
+      </div>
+    </section>
 
+    <!-- =================================================================
+         5. METODOLOGÍA · Texto fijo, sin interacción
+         ================================================================= -->
+    <section class="section section--alt">
+      <div class="wrap">
+        <p class="eyebrow" data-i18n="met.eyebrow">Metodología</p>
+        <h2 data-i18n="met.titulo">Pérdida esperada = PD × EAD × LGD</h2>
+        <p class="formula" data-i18n-html="met.formula">Pérdida esperada ($) = <b>PD</b> × <b>EAD</b> × <b>LGD</b> × Importe</p>
+        <div class="metodo">
+          <div class="panel"><b>PD</b><p data-i18n="met.pd">Probabilidad de que el cliente no pague. Modelo de clasificación entrenado con préstamos de Lending Club de 2007 a 2015.</p></div>
+          <div class="panel"><b>EAD</b><p data-i18n="met.ead">Parte del importe que sigue pendiente cuando llega el impago. Modelo de regresión.</p></div>
+          <div class="panel"><b>LGD</b><p data-i18n="met.lgd">Parte de lo pendiente que no se recupera. Se usa la media histórica (0,869), porque ningún modelo la mejoraba.</p></div>
+        </div>
       </div>
     </section>
   </main>
 
   <!-- ===================================================================
-       4. METHODOLOGY · Fixed text, no interaction
+       PIE
        =================================================================== -->
-  <section class="contenedor metodologia">
-    <h2 data-i18n="met.titulo">Metodología</h2>
-    <p class="formula" data-i18n-html="met.formula">Pérdida esperada (€) = <b>PD</b> × <b>EAD</b> × <b>LGD</b> × Importe</p>
-    <ul>
-      <li data-i18n-html="met.pd"><b>PD</b> (Probability of Default): probabilidad de que el cliente no pague. Modelo de clasificación.</li>
-      <li data-i18n-html="met.ead"><b>EAD</b> (Exposure at Default): parte del importe pendiente en el momento del impago. Modelo de regresión.</li>
-      <li data-i18n-html="met.lgd"><b>LGD</b> (Loss Given Default): parte de esa exposición que no se recupera. Modelo de regresión.</li>
-    </ul>
-  </section>
-
-  <!-- ===================================================================
-       5. FOOTER
-       =================================================================== -->
-  <footer class="pie">
-    <div class="contenedor" data-i18n="pie.texto">
-      Proyecto demostrativo de data science · Datos anonimizados · No es una decisión de crédito real.
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <p data-i18n="pie.texto">Proyecto demostrativo de data science con datos públicos de Lending Club. No es una decisión de crédito real.</p>
+      <p><a href="https://drm-data.com">drm-data.com</a></p>
     </div>
   </footer>
-
 </body>
 </html>

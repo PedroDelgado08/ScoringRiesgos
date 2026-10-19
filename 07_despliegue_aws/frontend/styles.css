@@ -1,743 +1,442 @@
 /* =====================================================================
-   styles.css · Credit Risk Scoring demo
+   styles.css · Aspecto de la demo de Scoring de Riesgos
    ---------------------------------------------------------------------
-   LOOK of the page. Uses the SAME section numbering as
-   index.html and app.js (1. Header, 2. Form…).
+   Mismo estilo que drm-data.com (PedroDelgado08.github.io/v2/css/styles.css):
+   se copian sus "tokens de diseño" (colores, tipografías, radios) y sus
+   componentes (botones, chips, campos, paneles, cifras), y se añaden los
+   propios de la demo (pestañas, resultado del scoring, cuadro de mando).
 
-   HOW TO READ A CSS RULE
-     selector { property: value; }
-       .tarjeta                      → elements with class="tarjeta"
-       .campo label                  → <label> elements INSIDE a .campo
-       .estado.ok                    → element with BOTH classes at once
-       .idioma[aria-pressed="true"]  → .idioma with that attribute and value
-       input:checked + span          → <span> right AFTER a checked input
-     If two rules contradict each other, the more specific one wins; if equal,
-     the one that appears further down in the file.
-     Ids (#…) are barely used here: ids are for app.js and
-     classes for the CSS; that way each file has "its own" hooks.
+   ¿Por qué copiar y no enlazar el CSS de drm-data.com? Son dos webs
+   independientes: si la demo cargara la hoja de la web principal, un
+   cambio allí podría romper la demo sin darnos cuenta.
 
-   UNITS
-     px  → fixed pixels (borders, shadows)
-     rem → relative to the base font size (16px): 1.5rem = 24px.
-           If the user enlarges the browser font, everything scales.
-     %   → relative to the parent element
-     fr  → "fraction" of the free space in a grid (Grid)
-
-   MAP
-     A. Design variables and dark mode
-     B. Base: general rules for the whole page
-     C. Reusable layout pieces (.contenedor, .rejilla, .tarjeta)
-     1. Header (title, API status, languages)
-     2. Form
-     3. Results
-     4. Methodology
-     5. Footer
-     D. Wide screens and accessibility (media queries)
+   MAPA (index.html y app.js usan la misma numeración)
+     A. Tokens de diseño (claro por defecto, oscuro con el botón)
+     B. Base: reinicio y estilos generales
+     C. Componentes de drm-data.com: botones, chips, campos, paneles
+     1. Cabecera: marca, pestañas, estado de la API, idioma y tema
+     P. Portada corta con retícula y cifras clave
+     2. Simulador: formulario
+     3. Simulador: resultado
+     4. Cartera: filtros, indicadores y gráficos
+     5. Metodología y pie
+     D. Adaptación a tableta y móvil
    ===================================================================== */
 
 
-/* =====================================================================
-   A. DESIGN VARIABLES
+/* ---------------------------------------------------------------------
+   A. TOKENS DE DISEÑO
    ---------------------------------------------------------------------
-   :root = the document root (<html>). Whatever is defined here is
-   available across the whole page with var(--name).
-   ===================================================================== */
+   Variables CSS: se definen una vez aquí y el resto del archivo las usa
+   con var(--nombre). Cambiar un valor aquí cambia toda la web.
+   Valores copiados de drm-data.com. Diferencia: allí el oscuro es el
+   tema por defecto; aquí, por decisión de Pedro, el CLARO va por defecto
+   y el oscuro se activa con el botón de la luna (app.js pone
+   data-theme="dark" en <html>). */
 :root {
-  /* --- Colors: light mode --- */
-  --fondo: #f4f6f9;              /* general page background              */
-  --superficie: #ffffff;         /* card and header background           */
-  --texto: #1a2233;              /* main text                             */
-  --texto-suave: #5b6678;        /* secondary text (legends, hints)       */
-  --borde: #dde2ea;              /* lines and borders                     */
-  --acento: #1f5fbf;             /* brand color: button, bars, values     */
-  --acento-suave: #e8effb;       /* soft background with the brand tone   */
-  --texto-sobre-acento: #ffffff; /* text on top of the accent color       */
-  --ok: #1e8e4e;                 /* status: model ready (green)           */
-  --aviso: #c98a00;              /* status: starting (amber)              */
-  --error: #c62828;              /* status and error messages (red)       */
-  --error-suave: #fdecea;        /* error message background              */
+  --bg: #f4f6f9;            /* Fondo general */
+  --bg-alt: #eaeef4;        /* Fondo de secciones alternas y cajas suaves */
+  --panel: #ffffff;         /* Fondo de tarjetas y paneles */
+  --line: #d5dce7;          /* Bordes y separadores */
+  --grid: rgba(40, 70, 120, .07); /* Líneas de la retícula de fondo */
+  --fg: #121a2a;            /* Texto principal */
+  --muted: #55607a;         /* Texto secundario */
+  --accent: #c47a08;        /* Ámbar: botones y cifra principal */
+  --accent-ink: #ffffff;    /* Texto sobre el ámbar */
+  --data: #157a90;          /* Cian: valores de datos y serie del modelo */
+  --good: #1f8a5b;          /* Verde: pagó / modelo listo */
+  --warn: #a66f00;          /* Amarillo: iniciando / aviso */
+  --bad: #c0443a;           /* Rojo: impagó / error */
+  --shadow: 0 20px 50px -24px rgba(20, 40, 80, .25); /* Sombra de paneles */
 
-  /* --- Shapes and typography --- */
-  --radio: 12px;                 /* rounded corners of the cards          */
-  --radio-pequeno: 8px;          /* corners of fields and buttons         */
-  --sombra: 0 1px 2px rgb(16 24 40 / 0.06), 0 2px 8px rgb(16 24 40 / 0.06);
-  /* System fonts: no external downloads, instant loading.
-     The browser uses the first one that exists (Segoe UI on Windows…). */
-  --fuente: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif; /* Títulos */
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;          /* Texto */
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; /* Cifras y etiquetas */
 
-  /* Tells the browser the page supports both modes: so the
-     native controls (dropdowns, scrollbars) change as well */
-  color-scheme: light dark;
+  --radius: 10px;           /* Redondeo estándar */
+  --wrap: 1180px;           /* Ancho máximo del contenido */
+  --gutter: clamp(16px, 4vw, 40px); /* Margen lateral, nunca menor de 16px */
+  color-scheme: light;      /* Controles nativos (scroll, selects, fechas) en claro */
 }
 
-/* --- Dark mode ---
-   Only active if the visitor's operating system is in dark
-   mode. Only the colors are redefined: the rest of the CSS does not change,
-   because everything uses var(--…). */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: #0f141b;
-    --superficie: #171e28;
-    --texto: #e6ebf2;
-    --texto-suave: #9aa6b8;
-    --borde: #2a3442;
-    --acento: #6ea2ff;
-    --acento-suave: #1c2a42;
-    --texto-sobre-acento: #0f141b;
-    --ok: #4cc28a;
-    --aviso: #e0b040;
-    --error: #ff6b6b;
-    --error-suave: #3a1d1d;
-    --sombra: 0 1px 2px rgb(0 0 0 / 0.4);
-  }
+/* Tema oscuro: solo cuando se elige con el botón (gana al claro).
+   Mismos valores que el tema por defecto de drm-data.com */
+:root[data-theme="dark"] {
+  --bg: #0c1220; --bg-alt: #0f1727; --panel: #141d30; --line: #24314a;
+  --grid: rgba(120, 150, 200, .07); --fg: #e7ebf3; --muted: #97a3b8;
+  --accent: #f2a93b; --accent-ink: #1a1204; --data: #5cc6dc;
+  --good: #4fbf8a; --warn: #e8b04a; --bad: #e46a5e;
+  --shadow: 0 20px 50px -20px rgba(0, 0, 0, .6);
+  color-scheme: dark;       /* Controles nativos en oscuro */
 }
 
 
-/* =====================================================================
-   B. BASE · General rules for the whole page
-   ===================================================================== */
-
-/* box-sizing: border-box → an element's width INCLUDES its padding
-   and border. Without this, a field with width:100% and padding would overflow
-   its box. Applied to everything (*) by convention. */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
-/* IMPORTANT: the hidden attribute (used by app.js to show/hide)
-   loses against any CSS "display" rule. With this rule,
-   hidden always wins. Without it, for example, the profile (display: grid)
-   would be visible even if app.js hid it. */
-[hidden] {
-  display: none !important;
-}
-
+/* ---------------------------------------------------------------------
+   B. BASE
+   --------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }   /* El ancho incluye el padding */
+html { scroll-behavior: smooth; scroll-padding-top: 80px; } /* Scroll suave; deja hueco a la cabecera fija */
 body {
-  margin: 0;                     /* the browser adds 8px by default */
-  font-family: var(--fuente);
-  font-size: 16px;
-  line-height: 1.5;              /* line height: 1.5 times the size    */
-  color: var(--texto);
-  background: var(--fondo);
-}
-
-/* Remove the default margins of headings and paragraphs: spacing
-   is controlled from each section, not from the browser defaults */
-h1, h2, p {
-  margin: 0;
-}
-
-b, strong {
-  font-weight: 600;
-}
-
-/* Visible outline when moving through the page with the KEYBOARD (Tab).
-   :focus-visible only appears with the keyboard, not on mouse clicks */
-:focus-visible {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
-}
-
-
-/* =====================================================================
-   C. REUSABLE LAYOUT PIECES
-   ===================================================================== */
-
-/* .contenedor: limits the width and centers it.
-   margin-inline: auto → same margin on the left and right = centered.
-   padding-inline: 16px → never touching the edge on mobile. */
-.contenedor {
-  width: 100%;
-  max-width: 1100px;
-  margin-inline: auto;
-  padding-inline: 16px;
-}
-
-/* .rejilla: the <main> with the form and the results.
-   On mobile, a single column (each child below the previous one).
-   On wide screens it switches to two columns: see section D. */
-.rejilla {
-  display: grid;
-  gap: 20px;                     /* gap between rows/columns */
-  padding-block: 24px;           /* space above and below          */
-}
-
-/* .tarjeta: white box with border, rounded corners and shadow */
-.tarjeta {
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  border-radius: var(--radio);
-  box-shadow: var(--sombra);
-  padding: 20px;
-}
-
-.tarjeta-titulo {
-  font-size: 1.05rem;
-  margin-bottom: 16px;
-}
-
-
-/* =====================================================================
-   1. HEADER
-   ===================================================================== */
-.cabecera {
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde);
-}
-
-/* Flexbox: title on the left, status + languages on the right.
-   justify-content: space-between → pushes the groups to the edges.
-   flex-wrap: wrap → on mobile, if they do not fit, they move to another line. */
-.cabecera-interior {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 24px;                /* 12px between lines, 24px between columns */
-  padding-block: 16px;
-}
-
-/* 1.1 Title and subtitle */
-/* 1.1 Brand + title
-   Row: [DRMdata logo] | [title and subtitle]
-   flex-wrap: on narrow screens the title drops below the brand */
-.cabecera-marca {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-}
-
-/* 1.1.a Brand: link with icon + text, without the usual link underline */
-.marca {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;                /* never shrink it */
-  color: var(--texto);
-  text-decoration: none;
-  font-size: 1.2rem;
-  letter-spacing: -0.01em;
-}
-
-/* Icon: the square takes the accent color and the bars the
-   "text on accent" color. Since variables are used, it adapts to dark mode by itself. */
-.marca-logo {
-  width: 32px;
-  height: 32px;
-}
-.marca-logo rect {
-  fill: var(--acento);
-}
-.marca-logo path {
-  fill: none;
-  stroke: var(--texto-sobre-acento);
-  stroke-width: 3;
-  stroke-linecap: round;         /* rounded bar ends */
-}
-
-/* Text logo: "DRM" in bold, "data" in the accent color */
-.marca-texto b {
-  font-weight: 700;
-}
-.marca-texto span {
-  font-weight: 500;
-  color: var(--acento);
-}
-
-/* Vertical separator: a 1px line as tall as the row */
-.cabecera-separador {
-  width: 1px;
-  align-self: stretch;
-  background: var(--borde);
-}
-
-/* On mobile everything does not fit in one row: the title drops and the separator
-   is not needed (a vertical line with nothing next to it would look odd) */
-@media (max-width: 599px) {
-  .cabecera-separador {
-    display: none;
-  }
-}
-.titulo {
-  font-size: 1.5rem;
-  letter-spacing: -0.01em;       /* letters slightly closer together in large headings */
-}
-
-.subtitulo {
-  color: var(--texto-suave);
-  font-size: 0.95rem;
-}
-
-/* Right-hand group: status (1.2) and languages (1.3) in a row */
-.cabecera-acciones {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-/* 1.2 API status indicator
-   A "pill" (very large border-radius) with a colored dot.
-   app.js gives it the class cargando / ok / error. */
-.estado {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  border: 1px solid var(--borde);
-  border-radius: 999px;
-  background: var(--fondo);
-  font-size: 0.85rem;
-}
-
-.estado-punto {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;            /* 50 % = circle */
-  background: var(--texto-suave);
-}
-
-/* The dot's color depends on the class set by app.js */
-.estado.cargando .estado-punto {
-  background: var(--aviso);
-  animation: latido 1.2s ease-in-out infinite;  /* blinking while starting */
-}
-.estado.ok .estado-punto    { background: var(--ok); }
-.estado.error .estado-punto { background: var(--error); }
-
-/* "Heartbeat" animation: halfway through the cycle the dot becomes semi-transparent */
-@keyframes latido {
-  50% { opacity: 0.3; }
-}
-
-/* 1.3 Language selector (flags)
-   The group is another pill; the active button is highlighted as a
-   white "tab" inside it. */
-.idiomas {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border: 1px solid var(--borde);
-  border-radius: 999px;
-  background: var(--fondo);
-}
-
-.idioma {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--texto-suave);
-  font: inherit;                 /* buttons do NOT inherit the default font */
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;               /* hand cursor on mouse hover */
-  opacity: 0.7;
-  transition: opacity 0.15s, background 0.15s;  /* smooth changes */
-}
-
-/* Flags: same size for both even though their proportions
-   differ (Spain 3:2, United Kingdom 2:1). object-fit: cover crops
-   the excess instead of distorting the image. */
-.idioma img {
-  width: 20px;
-  height: 14px;
-  object-fit: cover;
-  border-radius: 2px;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.12);  /* thin outline so the white does not get lost */
-}
-
-.idioma:hover {
-  opacity: 1;
-}
-
-/* Active language button: i18n.js sets aria-pressed="true" on it */
-.idioma[aria-pressed="true"] {
-  background: var(--superficie);
-  color: var(--texto);
-  opacity: 1;
-  box-shadow: var(--sombra);
-}
-
-
-/* =====================================================================
-   2. FORM
-   ===================================================================== */
-
-/* Each field: spacing with the next one */
-.campo {
-  margin-bottom: 18px;
-}
-
-/* <fieldset> comes with browser border, padding and margins (the gray
-   "Plazo" box seen without CSS): they are removed so it looks the same
-   as the other fields. min-width: 0 prevents a classic fieldset
-   overflow inside grids. */
-fieldset.campo {
-  border: 0;
-  padding: 0;
-  margin-inline: 0;
-  min-width: 0;
-}
-
-/* Field labels: on their own line, bold and small */
-.campo label,
-.campo legend {
-  display: block;
-  padding: 0;
-  margin-bottom: 6px;
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-/* 2.3 / 2.4 Slider header: label on the left,
-   chosen value (<output>) on the right */
-.campo-cabecera {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;         /* aligns by the text baseline */
-}
-
-output {
-  font-weight: 600;
-  color: var(--acento);
-  font-variant-numeric: tabular-nums;  /* equal-width digits: they do not "jump" when changing */
-}
-
-/* Dropdowns (2.1, 2.6) */
-select {
-  width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-pequeno);
-  background: var(--superficie);
-  color: var(--texto);
-  font: inherit;
-}
-
-/* Sliders: accent-color paints the native control with our color
-   without having to redesign it entirely (redesigning it takes a lot of CSS for
-   each browser) */
-input[type="range"] {
-  width: 100%;
-  margin: 0;
-  accent-color: var(--acento);
-}
-
-/* Min/max legend below the slider, at both ends */
-.campo-leyenda {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  color: var(--texto-suave);
-}
-
-/* 2.6 Purpose and housing, side by side in two equal columns (1fr 1fr).
-   The inner .campo elements already have their margin; the row's is removed. */
-.campo-fila {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-/* 2.2 Client profile: soft box with two data columns */
-.perfil {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 16px;
-  margin: 0 0 18px;              /* <dl> comes with browser margins */
-  padding: 12px 14px;
-  border-radius: var(--radio-pequeno);
-  background: var(--acento-suave);
-}
-
-.perfil dt {
-  font-size: 0.75rem;
-  color: var(--texto-suave);
-}
-
-.perfil dd {
-  margin: 0;                     /* <dd> comes with default indentation */
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 2.5 Term as a "segmented control" (two joined buttons).
-   Common trick: the real radio is hidden VISUALLY (it still
-   exists, so it works with the keyboard and screen readers) and the
-   <span> right after it is styled (selector "+"). */
-.segmentado {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-pequeno);
-  background: var(--fondo);
-}
-
-/* Overrides the general ".campo label" style (it goes further down, so it wins) */
-.segmentado label {
-  position: relative;
-  display: block;
-  margin: 0;
-  font-weight: 400;
-}
-
-.segmentado input {
-  position: absolute;
-  opacity: 0;                    /* invisible but present */
-  pointer-events: none;
-}
-
-.segmentado span {
-  display: block;
-  padding: 7px;
-  border-radius: 6px;
-  text-align: center;
-  color: var(--texto-suave);
-  cursor: pointer;
-}
-
-/* Checked option: white "tab", like the active language (1.3) */
-.segmentado input:checked + span {
-  background: var(--superficie);
-  color: var(--texto);
-  font-weight: 600;
-  box-shadow: var(--sombra);
-}
-
-/* When moving with Tab, the focus outline goes to the visible span */
-.segmentado input:focus-visible + span {
-  outline: 2px solid var(--acento);
-  outline-offset: 2px;
-}
-
-/* 2.7 Monthly installment: separated by a line, text on the left,
-   figure on the right */
-.cuota {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding-top: 14px;
-  margin-bottom: 18px;
-  border-top: 1px solid var(--borde);
-  color: var(--texto-suave);
-  font-size: 0.9rem;
-}
-
-.cuota strong {
-  color: var(--texto);
-  font-size: 1.1rem;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 2.8 Main button */
-.boton {
-  width: 100%;
-  padding: 12px;
-  border: 0;
-  border-radius: var(--radio-pequeno);
-  background: var(--acento);
-  color: var(--texto-sobre-acento);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: filter 0.15s;
-}
-
-/* :hover = mouse over it; :not(:disabled) = only if it is enabled */
-.boton:hover:not(:disabled) {
-  filter: brightness(1.1);
-}
-
-/* Disabled (before loading clients and while evaluating) */
-.boton:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-
-/* =====================================================================
-   3. RESULTS
-   ===================================================================== */
-
-/* Results column: its blocks one below the other.
-   align-content: start → they do not stretch to fill the height. */
-.resultados {
-  display: grid;
-  gap: 20px;
-  align-content: start;
-}
-
-/* 3.1 Empty state: dashed border and soft centered text,
-   so it reads as "something will appear here" */
-.vacio {
-  padding: 48px 24px;
-  border-style: dashed;
-  box-shadow: none;
-  text-align: center;
-  color: var(--texto-suave);
-}
-
-/* 3.2 Error message: soft red background and red text.
-   currentColor = the text color (here, the red of --error) */
-.aviso-error {
-  padding: 12px 16px;
-  border: 1px solid currentColor;
-  border-radius: var(--radio-pequeno);
-  background: var(--error-suave);
-  color: var(--error);
-  font-size: 0.9rem;
-}
-
-/* 3.3.1 Expected loss: the main figure, large and centered */
-.destacado {
-  margin-bottom: 20px;           /* spacing with the parameters card */
-  padding: 28px 20px;
-  text-align: center;
-}
-
-.destacado-etiqueta {
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;     /* UPPERCASE only visually (the real text does not change) */
-  letter-spacing: 0.08em;
-  color: var(--texto-suave);
-}
-
-.destacado-valor {
-  margin-block: 6px;
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-
-.destacado-pie {
-  color: var(--texto-suave);
-}
-
-/* 3.3.2 PD, EAD, LGD parameters
-   ".parametro + .parametro" = each parameter that comes AFTER another:
-   so there is space between them but not before the first one. */
-.parametro + .parametro {
-  margin-top: 16px;
-}
-
-/* Name on the left, value on the right */
-.parametro-cabecera {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-  font-size: 0.9rem;
-}
-
-/* :last-child = the last span (the numeric value) */
-.parametro-cabecera span:last-child {
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Bar: the gray track (.barra) and the colored fill (.barra-relleno).
-   app.js sets the fill width (e.g. width: 36%); transition
-   makes it grow animated from 0 instead of appearing all at once. */
-.barra {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--fondo);
-  overflow: hidden;              /* the fill does not stick out of the corners */
-}
-
-.barra-relleno {
-  width: 0;                      /* initial value; changed by app.js */
-  height: 100%;
-  border-radius: inherit;
-  background: var(--acento);
-  transition: width 0.6s ease;
-}
-
-
-/* =====================================================================
-   4. METHODOLOGY
-   ===================================================================== */
-.metodologia {
-  padding-block: 8px 32px;       /* 8px above, 32px below */
-}
-
-.metodologia h2 {
-  margin-bottom: 10px;
-  font-size: 1.15rem;
-}
-
-/* Formula in a monospace font, like a code block */
-.formula {
-  display: inline-block;         /* the box fits the text, not the full width */
-  margin-bottom: 12px;
-  padding: 8px 14px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-pequeno);
-  background: var(--superficie);
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 0.9rem;
-}
-
-.metodologia ul {
-  margin: 0;
-  padding-left: 20px;
-  color: var(--texto-suave);
-}
-
-.metodologia li + li {
-  margin-top: 4px;
-}
-
-
-/* =====================================================================
-   5. FOOTER
-   ===================================================================== */
-.pie {
-  padding-block: 16px;
-  border-top: 1px solid var(--borde);
-  font-size: 0.8rem;
-  text-align: center;
-  color: var(--texto-suave);
-}
-
+  margin: 0;                                         /* Sin margen del navegador */
+  background: var(--bg);                             /* Fondo del tema */
+  color: var(--fg);                                  /* Texto del tema */
+  font: 400 1rem/1.65 var(--font-body);              /* Tamaño e interlineado */
+  -webkit-font-smoothing: antialiased;               /* Texto más nítido en Mac */
+}
+a { color: inherit; }                                /* Enlaces con el color del texto */
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; margin: 0; text-wrap: balance; } /* Títulos equilibrados */
+h2 { font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; letter-spacing: -.02em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; } /* Foco visible con el teclado */
+
+/* IMPORTANTE: app.js muestra y oculta bloques con el atributo hidden.
+   Algunas reglas de abajo ponen display: grid/flex, que ganaría a hidden;
+   esta regla asegura que un elemento con hidden SIEMPRE se oculta */
+[hidden] { display: none !important; }
+
+/* Contenedor centrado con margen lateral */
+.wrap { width: 100%; max-width: var(--wrap); margin-inline: auto; padding-inline: var(--gutter); }
+
+/* Enlace "saltar al contenido": oculto hasta que recibe el foco con Tab */
+.skip { position: absolute; left: -999px; top: 8px; background: var(--accent); color: var(--accent-ink); padding: 8px 12px; z-index: 100; }
+.skip:focus { left: 8px; }
+
+/* Etiqueta pequeña en mayúsculas encima de los títulos */
+.eyebrow {
+  font: 500 .78rem/1 var(--font-mono);               /* Monoespaciada pequeña */
+  letter-spacing: .14em; text-transform: uppercase;  /* Mayúsculas espaciadas */
+  color: var(--data);                                /* Color de datos */
+}
+
+
+/* ---------------------------------------------------------------------
+   C. COMPONENTES DE DRM-DATA.COM
+   --------------------------------------------------------------------- */
+
+/* C.1 Botones */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 20px; border-radius: 8px;            /* Tamaño y forma */
+  font: 600 .95rem/1 var(--font-body); text-decoration: none; cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform .2s, background-color .2s, border-color .2s, opacity .2s; /* Animación suave */
+}
+.btn:hover:not(:disabled) { transform: translateY(-2px); } /* Se eleva al pasar el ratón */
+.btn:disabled { opacity: .55; cursor: not-allowed; }  /* Desactivado mientras carga o evalúa */
+.btn--primary { background: var(--accent); color: var(--accent-ink); } /* Principal, en ámbar */
+.btn--ghost { border-color: var(--line); color: var(--fg); background: transparent; } /* Secundario con borde */
+.btn--ghost:hover { border-color: var(--accent); }
+.btn--sm { padding: 9px 14px; font-size: .88rem; }    /* Variante pequeña */
+
+/* Botón cuadrado solo con icono (tema) o con texto corto (idioma) */
+.icon-btn {
+  width: 38px; height: 38px; display: inline-grid; place-items: center;
+  border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer;
+}
+.icon-btn:hover { border-color: var(--accent); }
+.lang-btn { width: auto; padding-inline: 10px; font: 600 .78rem var(--font-mono); letter-spacing: .06em; } /* Botón EN/ES */
+
+/* Botón con aspecto de enlace ("Quitar filtros") */
+.link-btn { background: none; border: 0; color: var(--accent); font: 600 .85rem var(--font-body); cursor: pointer; padding: 4px 0; }
+
+/* C.2 Chips (filtro por nota LC en el simulador) */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }  /* En fila; saltan de línea si no caben */
+.chip {
+  font: 500 .82rem/1 var(--font-mono); padding: 8px 12px; border-radius: 999px; /* Forma de píldora */
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); cursor: pointer;
+  transition: color .2s, border-color .2s, background-color .2s;
+}
+.chip:hover { color: var(--fg); }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); } /* Chip activo */
+
+/* C.3 Campos de formulario */
+.field { display: grid; gap: 6px; font-size: .92rem; min-width: 0; }
+.field > span, .field__head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--muted); } /* Etiqueta (y valor) */
+.field output { font: 500 .95rem var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; } /* Valor del deslizador */
+.field input[type="number"], .field input[type="date"], .field select {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg); /* Hereda la tipografía */
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+.field input[type="number"] { font-family: var(--font-mono); font-variant-numeric: tabular-nums; } /* Cifras alineadas */
+.field input:focus, .field select:focus { border-color: var(--accent); } /* Borde ámbar al escribir */
+.field input[type="range"] { width: 100%; accent-color: var(--accent); } /* Deslizador en ámbar */
+.field__hint { font-size: .78rem; color: var(--muted); } /* Pista bajo un campo */
+.field__legend { display: flex; justify-content: space-between; font: 400 .75rem var(--font-mono); color: var(--muted); } /* Mín y máx del deslizador */
+
+/* C.4 Paneles: caja con borde, como las tarjetas de drm-data.com */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; min-width: 0; }
+
+/* C.5 Fila de cifras con separadores verticales (como .metrics de drm-data.com) */
+.metrics { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.metrics div { padding: 14px 16px; min-width: 0; }
+.metrics div + div { border-left: 1px solid var(--line); }
+.metrics dt { font-size: .8rem; color: var(--muted); }
+.metrics dd { margin: 0 0 2px; font: 600 1.25rem var(--font-mono); color: var(--accent); font-variant-numeric: tabular-nums; order: -1; }
+.metrics div { display: flex; flex-direction: column; } /* order: -1 pone la cifra (dd) encima de su texto (dt) */
+
+/* C.6 Nota pequeña al pie de un bloque */
+.note { font-size: .78rem; color: var(--muted); }
+
 
-/* =====================================================================
-   D. WIDE SCREENS AND ACCESSIBILITY
+/* ---------------------------------------------------------------------
+   1. CABECERA
    ---------------------------------------------------------------------
-   @media = "apply these rules ONLY if the condition is met".
-   ===================================================================== */
-
-/* D.1 From 860px wide (laptop, desktop):
-   two columns → fixed 380px form | results with the rest (1fr) */
-@media (min-width: 860px) {
-  .rejilla {
-    grid-template-columns: 380px 1fr;
-    align-items: start;          /* each column with its natural height */
-  }
-
-  /* sticky: the results stay fixed at the top when scrolling,
-     so they are always visible while adjusting the form */
-  .resultados {
-    position: sticky;
-    top: 16px;
-  }
+   Fija arriba y translúcida, como la de drm-data.com. Tres zonas:
+   [marca + producto] [pestañas] [estado · idioma · tema] */
+.nav {
+  position: sticky; top: 0; z-index: 50;             /* Se queda arriba al hacer scroll */
+  background: color-mix(in srgb, var(--bg) 85%, transparent); /* Fondo semitransparente */
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); /* Desenfoca lo que pasa por detrás */
+  border-bottom: 1px solid var(--line);
+}
+.nav__inner {
+  display: grid; align-items: center; gap: 12px 24px; min-height: 68px;
+  grid-template-columns: auto 1fr auto;              /* marca | pestañas (centro) | acciones */
+  grid-template-areas: "marca pestanas acciones";
 }
 
-/* D.2 If the visitor has asked their system to "reduce motion"
-   (accessibility), animations and transitions are disabled */
+/* 1.1 Marca: logotipo de texto drm/data (enlaza a drm-data.com) + producto */
+.nav__brand { grid-area: marca; display: flex; align-items: center; gap: 14px; min-width: 0; }
+.brand { display: inline-flex; align-items: baseline; text-decoration: none; font: 800 1.3rem/1 var(--font-display); letter-spacing: -.03em; }
+.brand__mark { color: var(--fg); }
+.brand__slash { color: var(--accent); margin: 0 1px; } /* Barra en ámbar */
+.brand__word { color: var(--data); font-weight: 500; }
+.nav__product {                                       /* "Scoring de Riesgos", separado por una línea */
+  padding-left: 14px; border-left: 1px solid var(--line);
+  font: 600 .95rem/1.2 var(--font-body); color: var(--fg); white-space: nowrap;
+}
+
+/* 1.2 Pestañas Simulador / Cartera (role="tab"; app.js pone aria-selected) */
+.tabs { grid-area: pestanas; display: flex; justify-content: center; gap: 4px; }
+.tab {
+  font: 500 .93rem/1 var(--font-body); color: var(--muted); background: none; cursor: pointer;
+  border: 0; border-bottom: 2px solid transparent;   /* Raya inferior, invisible si no está activa */
+  padding: 10px 14px;
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); } /* Activa: raya ámbar */
+
+/* 1.3 Acciones: estado de la API, idioma y tema */
+.nav__actions { grid-area: acciones; display: flex; align-items: center; gap: 10px; }
+
+/* 1.3.a Indicador de estado de la API. app.js cambia su clase
+   (cargando / ok / error) y su texto. Aquí se ve el arranque en frío */
+.estado { display: inline-flex; align-items: center; gap: 8px; font: 400 .8rem var(--font-mono); color: var(--muted); white-space: nowrap; }
+.estado__punto { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.estado.cargando .estado__punto { background: var(--warn); animation: latido 1.2s ease-in-out infinite; } /* Ámbar que late */
+.estado.ok .estado__punto { background: var(--good); box-shadow: 0 0 0 4px color-mix(in srgb, var(--good) 25%, transparent); } /* Verde con halo, como el punto "disponible" de drm-data.com */
+.estado.error .estado__punto { background: var(--bad); }
+@keyframes latido { 50% { opacity: .3; } }           /* A mitad del ciclo, semitransparente */
+
+
+/* ---------------------------------------------------------------------
+   P. PORTADA CORTA
+   ---------------------------------------------------------------------
+   Retícula de "plano" (líneas finas cada 40px), como la portada de drm-data.com */
+.hero {
+  padding-block: clamp(32px, 5vw, 56px);
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 40px 40px,      /* Líneas horizontales */
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 40px 40px, /* Líneas verticales */
+    var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.hero__grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 24px 48px; align-items: end; } /* Texto | cifras */
+.hero__copy { display: grid; gap: 14px; min-width: 0; }
+.hero__title { font-size: clamp(1.9rem, 4vw, 3rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.hero__title em { font-style: normal; color: var(--accent); } /* Segunda parte del titular en ámbar */
+.hero__lead { color: var(--muted); max-width: 60ch; }
+
+
+/* ---------------------------------------------------------------------
+   2. SIMULADOR · FORMULARIO
+   --------------------------------------------------------------------- */
+.section { padding-block: clamp(32px, 5vw, 56px); }
+
+/* Dos columnas: formulario | resultado. Tras calcular, app.js lleva la
+   vista al resultado si no se está viendo (el formulario es más largo) */
+.sim { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 24px; align-items: start; }
+.sim__form { display: grid; gap: 22px; }
+.sim__result { display: grid; gap: 16px; }
+
+/* 2.1 Bloques del formulario (<fieldset>): sin el marco gris del navegador */
+.bloque { border: 0; margin: 0; padding: 0; display: grid; gap: 14px; min-width: 0; }
+.bloque + .bloque { padding-top: 20px; border-top: 1px dashed var(--line); } /* Línea discontinua entre bloques, como un plano */
+.bloque__titulo { padding: 0; margin-bottom: 2px; font: 500 .75rem var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
+
+/* Campos en rejilla: 2 columnas en escritorio, 1 en móvil (sección D) */
+.campos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.campos--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.campo--ancho { grid-column: 1 / -1; }               /* Campo que ocupa toda la fila */
+
+/* 2.2 Selector de cliente: desplegable a todo el ancho y botones debajo */
+.cliente { display: grid; gap: 10px; }
+.cliente__botones { display: flex; flex-wrap: wrap; gap: 8px; } /* Saltan de línea si no caben */
+.btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); } /* "Cliente nuevo" activo */
+
+/* Ficha del cliente elegido: lo que hizo Lending Club con él */
+.ficha { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; font-size: .85rem; }
+.ficha div { display: flex; gap: 6px; }
+.ficha dt { color: var(--muted); }
+.ficha dd { margin: 0; font-family: var(--font-mono); }
+.editado { font: 500 .75rem var(--font-mono); color: var(--warn); } /* Aviso "datos modificados" */
+
+/* 2.3 Plazo como control segmentado (dos botones unidos) */
+.segmentado { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.segmentado label { cursor: pointer; }
+.segmentado input { position: absolute; opacity: 0; pointer-events: none; } /* El círculo del radio se oculta; se ve el <span> */
+.segmentado span { display: block; padding: 10px 16px; text-align: center; font: 500 .88rem/1 var(--font-mono); color: var(--muted); background: var(--bg); }
+.segmentado label + label span { border-left: 1px solid var(--line); }
+.segmentado input:checked + span { background: var(--fg); color: var(--bg); } /* Opción elegida, como el chip activo */
+.segmentado input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; } /* Foco con Tab */
+
+/* 2.4 Datos opcionales plegados (<details>) */
+.opcionales summary { cursor: pointer; font: 500 .75rem var(--font-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
+.opcionales[open] summary { margin-bottom: 14px; }
+
+/* 2.5 Botón de evaluar a todo el ancho */
+.sim__form .btn--primary { width: 100%; padding-block: 15px; }
+
+
+/* ---------------------------------------------------------------------
+   3. SIMULADOR · RESULTADO
+   --------------------------------------------------------------------- */
+
+/* 3.1 Estado vacío (antes de la primera evaluación) */
+.vacio { color: var(--muted); text-align: center; padding-block: 48px; border-style: dashed; }
+
+/* 3.2 Mensaje de error */
+.aviso-error {
+  padding: 14px 16px; border-radius: 8px; font-size: .9rem;
+  color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--panel)); /* Fondo rojo muy suave */
+  border: 1px solid color-mix(in srgb, var(--bad) 35%, transparent);
+}
+
+/* 3.3 Pérdida esperada: la cifra principal, grande y en ámbar
+   (como la cifra de la calculadora de drm-data.com) */
+.calc { display: grid; gap: 6px; }
+.calc__k { font: 500 .75rem var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.calc__big { font: 800 clamp(2.4rem, 5vw, 3.2rem)/1 var(--font-display); color: var(--accent); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.calc__line { font-size: .92rem; color: var(--muted); }
+
+/* 3.4 Parámetros PD, EAD y LGD: texto + barra */
+.parametros { display: grid; gap: 14px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.parametro { display: grid; gap: 6px; }
+.parametro__cab { display: flex; justify-content: space-between; gap: 12px; font-size: .9rem; }
+.parametro__cab b { font-family: var(--font-mono); font-weight: 600; }
+.parametro__valor { font: 500 .95rem var(--font-mono); font-variant-numeric: tabular-nums; }
+.barra { height: 8px; border-radius: 4px; background: var(--bg-alt); overflow: hidden; }
+.barra__relleno { height: 100%; width: 0; background: var(--data); transition: width .5s ease; } /* Crece de 0 al valor */
+.parametro .note { margin-top: -2px; }
+
+/* 3.5 Decil de riesgo: regla de 10 casillas; app.js marca la del cliente */
+.decil { display: grid; gap: 8px; }
+.decil__cab { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.decil__cab strong { font: 600 1rem var(--font-mono); }
+.regla { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.regla span {
+  height: 22px; border-radius: 3px; display: grid; place-items: center;
+  font: 400 .7rem var(--font-mono); color: var(--muted); background: var(--bg-alt);
+}
+.regla span.activo { background: var(--accent); color: var(--accent-ink); font-weight: 600; } /* Decil del cliente */
+.regla__leyenda { display: flex; justify-content: space-between; font-size: .75rem; color: var(--muted); }
+
+/* 3.6 Comparación con Lending Club: tabla de 3 columnas (concepto | LC | modelo) */
+.lc h3 { margin-bottom: 12px; }
+.comparacion { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.comparacion th, .comparacion td { padding: 9px 0; border-bottom: 1px solid var(--line); text-align: right; }
+.comparacion th:first-child, .comparacion td:first-child { text-align: left; color: var(--muted); font-weight: 400; font-family: var(--font-body); } /* Concepto a la izquierda, en letra normal */
+.comparacion thead th { font: 500 .72rem var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.comparacion td { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.comparacion .col-modelo { color: var(--data); }   /* Columna del modelo en cian (dato) */
+
+/* Resultado real del préstamo: pagó (verde) o impagó (rojo) */
+.real { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; font-size: .9rem; }
+.insignia { font: 600 .78rem/1 var(--font-mono); padding: 6px 10px; border-radius: 999px; }
+.insignia.pago { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.insignia.impago { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+
+
+/* ---------------------------------------------------------------------
+   4. CARTERA · CUADRO DE MANDO
+   --------------------------------------------------------------------- */
+.cartera { display: grid; gap: 20px; }
+
+/* 4.1 Barra de filtros: desplegables en rejilla que se adapta al ancho */
+.filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; align-items: end; }
+.filtros__pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 14px; font-size: .85rem; color: var(--muted); } /* Recuento a la izquierda, "Quitar filtros" a la derecha */
+
+/* 4.2 Indicadores (KPI): 4 cajas con la cifra del modelo y la real */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { display: grid; gap: 4px; padding: 18px; }
+.kpi__k { font: 500 .72rem var(--font-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.kpi__v { font: 600 1.5rem/1.1 var(--font-mono); color: var(--fg); font-variant-numeric: tabular-nums; }
+.kpi__sub { font-size: .82rem; color: var(--muted); }
+.kpi__sub b { font-family: var(--font-mono); font-weight: 500; color: var(--fg); }
+
+/* 4.3 Gráficos: rejilla de 2 columnas; ECharts dibuja dentro de .grafico__lienzo */
+.graficos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.grafico { margin: 0; display: grid; gap: 4px; align-content: start; }
+.grafico p { font-size: .85rem; color: var(--muted); }
+.grafico__lienzo { height: 300px; margin-top: 8px; } /* ECharts necesita una altura fija */
+.cargando-datos { color: var(--muted); text-align: center; padding-block: 48px; }
+
+
+/* ---------------------------------------------------------------------
+   5. METODOLOGÍA Y PIE
+   --------------------------------------------------------------------- */
+.section--alt { background: var(--bg-alt); border-top: 1px solid var(--line); }
+.metodo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.metodo .panel { display: grid; gap: 8px; align-content: start; }
+.metodo .panel b { font: 600 .8rem var(--font-mono); color: var(--accent); letter-spacing: .08em; } /* PD / EAD / LGD */
+.metodo .panel p { font-size: .92rem; color: var(--muted); }
+.formula { margin-top: 14px; font: 500 1rem var(--font-mono); }
+.formula b { color: var(--accent); }
+
+.footer { border-top: 1px solid var(--line); padding-block: 24px; font-size: .85rem; color: var(--muted); }
+.footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; }
+
+
+/* ---------------------------------------------------------------------
+   D. ADAPTACIÓN A TABLETA Y MÓVIL
+   --------------------------------------------------------------------- */
+/* Animaciones solo si el sistema no pide reducir el movimiento */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation: none !important;
-    transition: none !important;
+  html { scroll-behavior: auto; }
+  * { transition: none !important; animation: none !important; }
+}
+
+/* Tableta: pestañas en su propia fila bajo la marca; cartera en menos columnas */
+@media (max-width: 960px) {
+  .nav__inner {
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "marca acciones" "pestanas pestanas";
+    padding-block: 8px 0;
   }
+  .tabs { justify-content: flex-start; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .graficos { grid-template-columns: 1fr; }
+  .hero__grid { grid-template-columns: 1fr; }
+}
+
+/* Móvil (≤ 859px): todo en una columna, el resultado debajo del formulario */
+@media (max-width: 859px) {
+  .sim { grid-template-columns: 1fr; }
+  .metodo { grid-template-columns: 1fr; }
+}
+
+/* Móvil estrecho: se ocultan textos secundarios de la cabecera */
+@media (max-width: 560px) {
+  .nav__product { display: none; }                  /* Queda solo drm/data */
+  .estado__texto { display: none; }                 /* Queda solo el punto de color */
+  .campos, .campos--3 { grid-template-columns: 1fr; }
+  .metrics div { padding: 10px 12px; }              /* Las 3 cifras siguen en fila, más compactas */
+  .metrics dd { font-size: 1.05rem; }
+  .metrics dt { font-size: .72rem; }
+  .hero__lead { font-size: .95rem; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } /* 2 × 2 */
+  .kpi { padding: 14px; }
+  .kpi__v { font-size: 1.25rem; }
+  .panel { padding: 18px; }
 }

@@ -92,6 +92,9 @@ $Tipos = [ordered]@{
     "*.svg"  = "image/svg+xml"
     "*.png"  = "image/png"
     "*.jpg"  = "image/jpeg"
+    # Datos del cuadro de mando (data/cartera.json). Sin el tipo correcto, S3
+    # podría servirlo como texto genérico; charset=utf-8 por la «ñ» de "año"
+    "*.json" = "application/json; charset=utf-8"
 }
 $Cache = "public, max-age=300"
 
